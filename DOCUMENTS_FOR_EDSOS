@@ -18,12 +18,10 @@ Documents for EDSOS (Explicit Distributed Single Operation System)
 2.4 Onboard-Cache
 2.5 Extention
 
-3 Kernel-Abstractions
-3.1 Virtual-and-Isolation-Model
-3.2 Process-Scheduling
-3.3 File-System
-3.4 API-List
-3.5 ABI-List
+3 System-Service
+3.1 I/O-System
+3.2 Authorization-and-Authentication-System
+3.3 Registration-System
 
 4 User-Programming-Model
 4.1 Library-Developing-Reference
@@ -32,6 +30,8 @@ Documents for EDSOS (Explicit Distributed Single Operation System)
 4.4 RDMA-RC-Verbs-Compatibility
 4.5 Windows-App-Compatibility
 4.6 Linux-App-Compatibility
+4.7 API-List
+4.8 ABI-List
 
 5 Engineering-Guides
 5.1 Build-and-Test-Infrastructure
