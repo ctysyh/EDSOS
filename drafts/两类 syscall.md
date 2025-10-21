@@ -196,9 +196,3 @@ KPN 是一个 **CTRN（Cross TS Referring Node）**，同时属于：
 
 - **Scheduler 的唯一职责**：
   - **“在正确的时刻，让正确的 TS 节点，在正确的 Core 上，以正确的 TLB 上下文运行。”**
-
-### 4.4 EDSOS 是 microkernel 吗
-
-- 是的：它将系统逻辑分为两个部分，即基本的内存映射、CPU 调用作为狭义 Kernel，和文件、网络、授权等作为系统服务组件，并且系统服务组件都作为单独的“进程”；
-- 不是：它不存在*Kernel Process*，狭义 Kernel 所属的部分是以裸金属形式直接运行的，各个系统服务组件 TS 和用户 TS 就像使用 "硅通孔"（加载期 ABI 内联展开）连通到"硅中介层"（狭义 Kernel）、通过中介层内的“布线”（CTRN、链式消息总线、EDSOS Event等）实现互连。
-- **EDSOS 基于 TS 模型，创造了一种全新的 OS 形态，拥有 microkernel 的安全性和扩展性、monolithic kernel 的运行效率，更超越了 hybrid kernel 的历史包袱。**
