@@ -94,13 +94,28 @@
   │
   ├── Cell Array (shared)
   ├── Sense Amplifier (per bank, shared)
-  ├── (LIO,LIO') ←→ 1-to-2 Demultiplexer ←→ Banks (shared)
+  ├── (LIO,LIO') ← MUX-IOG ← Sense Amplifier
 
 [Sub PCB Board]
   │
   ├── Private Link ↔ Main PCB
   ├── CK Ref Out → Main PCB (for phase lock)
   └── All DQ' signals routed internally (not to DIMM edge)
+```
+
+MUX-IOG inside
+```
+[SA]
+ │
+ ├──[NMOS_A]── LIO_A
+ │     │
+ │   Gate = CSL_driven_by_PortA
+ │
+ └──[NMOS_B]── LIO_B
+       │
+     Gate = CSL_driven_by_PortB
+
+CSL_driven_by_PortX = Col_Decoder_Output ∧ PORT_EN_X
 ```
 
 > 最终，Sub PCB Board 呈现双边金手指外形，一边连接标准 DDR5 插槽，另一边连接 Main PCB。
