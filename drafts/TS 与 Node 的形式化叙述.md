@@ -169,17 +169,17 @@ $$
 
 $$
 \begin{aligned}
-\operatorname{Pause}(n) = 
+\operatorname{Wait}(n) = 
 &\text{ require } n.\mathcal{S} = \mathtt{running} \\
 &\quad n.\mathcal{S} = \mathtt{blocked}
 \end{aligned}
 $$
 
-### 8. Pause(n)
+### 8. Yield(n)
 
 $$
 \begin{aligned}
-\operatorname{Pause}(n) = 
+\operatorname{Yield}(n) = 
 &\text{ require } n.\mathcal{S} = \mathtt{running} \\
 &\quad n.\mathcal{S} = \mathtt{ready}
 \end{aligned}
@@ -189,7 +189,7 @@ $$
 
 $$
 \begin{aligned}
-\operatorname{Active}(n) = 
+\operatorname{Finish}(n) = 
 &\quad n.\mathcal{S} = \mathtt{zombie}
 \end{aligned}
 $$
@@ -198,7 +198,7 @@ $$
 
 $$
 \begin{aligned}
-\operatorname{Active}(n) = 
+\operatorname{Warn}(n) = 
 &\quad n.\mathcal{S} = \mathtt{error}
 \end{aligned}
 $$
