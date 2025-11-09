@@ -6,11 +6,11 @@
 
 ---
 
-## 一、节点六元组定义
+## 一、节点七元组定义
 
-一个 **Node** 是六元组：
+一个 **Node** 是七元组：
 $$
-n = (\mathcal{N}, \mathcal{S}, \mathcal{A}, \mathcal{C}, \mathcal{D}, \mathcal{I})
+n = (\mathcal{N}, \mathcal{S}, \mathcal{A}, \mathcal{C}, \mathcal{D}, \mathcal{I}, \mathtt{pc})
 $$
 其中分量含义如下：
 
@@ -21,7 +21,8 @@ $$
 | $\mathcal{A}$ | **有限序列** | 祖先链：$\mathcal{A} = [p_1, p_2, \dots, p_k]$，其中 $p_1$ 是直接父节点，$p_k$ 是根节点。满足栈序。 |
 | $\mathcal{C}$ | **有限有根树**（rooted tree）或 **空** | 表示以 $n$ 为根的**整个后代子树**。若 $\mathcal{C} = \emptyset$，表示无子节点；否则 $\mathcal{C}$ 是一个递归树结构，其根节点集合即为 $n$ 的直接子节点，每个子节点自身也携带其 $\mathcal{C}'$。 |
 | $\mathcal{D}$ | 映射 | 字段环境 |
-| $\mathcal{I}$ | 指令序列 | 控制流 |
+| $\mathcal{I}$ | 指令序列 | 控制流，$\mathcal{I} = \mathtt{instruct} = [i_1, \dots, i_m]$ |
+| $\mathtt{pc}$ | 自然数 | Program Counter，表示当前正在执行 i_pc |
 
 > - $\mathcal{C}$ **不是集合**，而是**子树**（subtree）。
 > - 这意味着 $\mathcal{C}$ 本身是一个**递归数据结构**，可形式化为：
