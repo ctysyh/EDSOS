@@ -2,6 +2,8 @@
 
 ## 字段解析的形式化定义
 
+> TSL 的字段解析是纯粹基于显式声明和绑定链的。
+
 ### 1. **精细化的字段环境 $\mathcal{D}$**
 
 我们将节点 $n$ 的字段环境 $\mathcal{D}$ 形式化为一个三元组：
@@ -79,7 +81,135 @@ $\text{Resolve}$ 是一个偏函数，其目标是将一个节点内的字段引
 
 ---
 
+## TSL 的指针解析与指针运算
+
+### 一、 前置定义回顾与扩展
+
+为保证自洽性，我们首先明确并扩展几个关键概念。
+
+#### 1.1 节点段布局函数
+
+对于任意节点实例 $n$，我们定义其段布局函数：
+$$
+\text{SegLayout}^n: \text{SegmentID} \rightarrow (\text{start}, \text{end})
+$$
+该函数返回每个段（如 `data_ance`, `data_publ` 等）在虚拟地址空间 $V_n$ 中的起始和结束地址。此布局在节点创建时即固定。
+
+#### 1.2 字段到偏移的映射
+
+对于节点 $n$ 的每个字段段，我们有确定的字段到偏移映射：
+- $\text{FieldOffset}_{publ}^n: \text{dom}(\mathcal{D}_{publ}^n) \rightarrow \mathbb{N}$
+- $\text{FieldOffset}_{priv}^n: \text{dom}(\mathcal{D}_{priv}^n) \rightarrow \mathbb{N}$
+- $\text{FieldOffset}_{ance}^n: \text{dom}(\mathcal{D}_{ance}^n) \rightarrow \mathbb{N}$
+
+这些映射由编译器根据类型环境 $\Theta$ 静态计算得出。
+
+#### 1.3 指针值的正式定义
+
+一个指针值 $p$ 是一个二元组：
+$$
+p ::= (v, n_{\text{src}})
+$$
+其中：
+- $n_{\text{src}}$ 是一个有效的节点实例。
+- $v \in V_{n_{\text{src}}}$ 是一个虚拟地址。
+
+---
+
+### 二、 指针值的解析：$\text{Deref}(p)$
+
+我们的目标是定义一个函数 $\text{Deref}(p)$，它接受一个指针 $p$，并返回其最终指向的**物理存储单元**，即一个 $(m, f_{publ})$ 对。
+
+整个过程分为两个阶段：**本地字段定位** 和 **远程绑定解析**。
+
+#### 2.1 阶段一：本地字段定位 $\text{LocateField}(n, v)$
+
+给定一个节点 $n$ 和其虚拟地址空间内的地址 $v$，定位 $v$ 所属的具体字段。
+
+**定义**：
+$$
+\text{LocateField}(n, v) =
+\begin{cases}
+\texttt{LocalPubl}(f) & \text{if } v \in [\text{SegLayout}^n(\texttt{data\_publ}).\text{start}, \text{SegLayout}^n(\texttt{data\_publ}).\text{end}) \\
+& \quad \text{and } \exists f, v = \text{SegLayout}^n(\texttt{data\_publ}).\text{start} + \text{FieldOffset}_{publ}^n(f) \\
+\texttt{LocalPriv}(f) & \text{if } v \in [\text{SegLayout}^n(\texttt{data\_priv}).\text{start}, \text{SegLayout}^n(\texttt{data\_priv}).\text{end}) \\
+& \quad \text{and } \exists f, v = \text{SegLayout}^n(\texttt{data\_priv}).\text{start} + \text{FieldOffset}_{priv}^n(f) \\
+\texttt{AnceRef}(f) & \text{if } v \in [\text{SegLayout}^n(\texttt{data\_ance}).\text{start}, \text{SegLayout}^n(\texttt{data\_ance}).\text{end}) \\
+& \quad \text{and } \exists f, v = \text{SegLayout}^n(\texttt{data\_ance}).\text{start} + \text{FieldOffset}_{ance}^n(f) \\
+\bot & \text{otherwise (invalid address)}
+\end{cases}
+$$
+
+#### 2.2 阶段二：完整解引用 $\text{Deref}(p)$
+
+现在，我们可以定义完整的解引用函数。
+
+**定义**：
+令 $p = (v, n_{\text{src}})$。
+1.  计算 $loc = \text{LocateField}(n_{\text{src}}, v)$。
+2.  根据 $loc$ 的结果分情况处理：
+    - **[D1 - 本地公开/私有字段]**：
+        - 若 $loc = \texttt{LocalPubl}(f)$ 或 $loc = \texttt{LocalPriv}(f)$，则
+          $$
+          \text{Deref}(p) = (n_{\text{src}}, f)
+          $$
+    - **[D2 - `ance` 字段引用]**：
+        - 若 $loc = \texttt{AnceRef}(f)$，则调用之前定义的字段解析函数：
+          $$
+          \text{Deref}(p) = \text{Resolve}(n_{\text{src}}, f)
+          $$
+          （回忆：$\text{Resolve}$ 要么返回 $(m, f_{publ})$，要么返回 $\bot$）
+    - **[D3 - 无效地址]**：
+        - 若 $loc = \bot$，则 $\text{Deref}(p) = \bot$。
+
+> **关键性质**：如果 $\text{Deref}(p) \neq \bot$，其结果必然是 $(m, f_{publ})$ 的形式，其中 $f_{publ} \in \text{dom}(\mathcal{D}_{publ}^m)$。这保证了所有有效指针最终都指向一个明确的、可写的物理存储位置。
+
+---
+
+### 三、 指针运算的形式化
+
+指针运算（主要是加法）非常直接，因为它只操作指针的虚拟地址部分，不改变其源节点上下文。
+
+#### 3.1 指针加法 $\text{PtrAdd}(p, k)$
+
+**定义**：
+令 $p = (v, n_{\text{src}})$ 为一个指针，$k \in \mathbb{Z}$ 为一个整数偏移量。
+$$
+\text{PtrAdd}(p, k) = (v + k, n_{\text{src}})
+$$
+结果是一个新的指针值 $p'$。
+
+#### 3.2 运算后的解析
+
+对运算结果进行解析，遵循相同的 $\text{Deref}$ 规则：
+$$
+\text{Deref}(\text{PtrAdd}(p, k)) = \text{Deref}((v + k, n_{\text{src}}))
+$$
+这个新指针可能：
+- 指向同一个字段内的不同字节（如果 $k$ 很小）。
+- 指向相邻的另一个字段。
+- 指向段外的无效地址（此时 $\text{Deref} = \bot$）。
+- **关键点**：即使 $p$ 原本指向一个 `ance` 字段，$p+k$ 也仍然是相对于 $n_{\text{src}}$ 的地址。只有在调用 $\text{Deref}(p+k)$ 时，才会触发对新地址 $v+k$ 的 `LocateField` 和可能的 `Resolve`。
+
+> **示例**：假设 `n_src.data_ance` 段有两个 `i32` 字段 `a` 和 `b`，它们在 $V_{n_{\text{src}}}$ 中连续排列。指针 `p_a = (&a, n_src)`。那么 `p_b = PtrAdd(p_a, 4)`。当执行 `Deref(p_b)` 时，`LocateField` 会发现 `v+4` 对应的是字段 `b`，然后调用 `Resolve(n_src, b)`。
+
+---
+
+### 四、 形式化总结
+
+通过以上定义，我们完成了对 TSL 指针语义的严格形式化：
+
+- **指针值**：被精确定义为 `(虚拟地址, 源节点)` 对。
+- **指针解析 (`Deref`)**：是一个两阶段过程：
+  1.  **结构化定位** (`LocateField`)：利用编译期确定的段布局和字段偏移，将虚拟地址映射回源节点内声明的具体字段名。
+  2.  **语义解析**：如果是本地字段，直接返回；如果是 `ance` 字段，则委托给已形式化的 `Resolve` 函数，完成跨节点的绑定链解析。
+- **指针运算 (`PtrAdd`)**：仅修改虚拟地址分量，产生一个新的、同样带有源节点上下文的指针。其有效性完全由后续的 `Deref` 调用来决定。
+
+---
+
 ## TSL 字段解析设计说明
+
+> 本节内容为字段解析的文字叙述。
 
 TSL 采用基于**节点命名空间**与**显式绑定规则**的字段解析机制。
 
@@ -98,8 +228,8 @@ TSL 采用基于**节点命名空间**与**显式绑定规则**的字段解析�
 
 字段解析遵循以下优先级规则（在当前节点内）：
 1. 若字段名存在于 `priv` 或 `publ` 中，直接返回本地值；
-2. 否则，若存在于 `ance` 中，则沿绑定链递归解析，直至抵达真实 `publ` 字段；
-3. 若以上均失败，且启用了传统祖先回溯模式（兼容路径），则按祖先链顺序查找 `publ` 字段（**此行为应谨慎使用，推荐优先通过 `ance` 显式声明依赖**）。
+2. 若存在于 `ance` 中，则沿绑定链递归解析，直至抵达真实 `publ` 字段
+3. 否则，这是一个无效字段。
 
 > **关键原则**：任何对非本地字段的访问，**必须通过 `ance` 块显式声明**。运行时祖先链的变化不会自动扩展当前节点的可见字段集——这确保了静态作用域的稳定性与程序的可推理性。
 

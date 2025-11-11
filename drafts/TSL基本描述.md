@@ -37,7 +37,7 @@ node example_main {
             }
             fn submit_er () => () {
                 inst_scri {
-                    err this 0
+                    warn this 0
                 }
             }
         }
