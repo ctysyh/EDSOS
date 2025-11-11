@@ -1,6 +1,7 @@
 # TSL Language Specification
 
 > TSL 语言规范
+> 其中节点结构新增加了 `imme` 和 `futu` 的区分，但对应部分内容暂未更新
 
 ---
 
@@ -15,6 +16,22 @@ node example_node {
     code { ... }
 }
 ```
+
+实际运行时的具体布局在节点创建时即固定，顺序如下（ABI 稳定）：
+
+| 段序 | 名称             |
+|------|------------------|
+| 0    | `meta_data`      |
+| 1    | `data_futu_ance` |
+| 2    | `data_futu_publ` |
+| 3    | `data_futu_priv` |
+| 4    | `data_imme_ance` |
+| 5    | `data_imme_publ` |
+| 6    | `data_imme_priv` |
+| 7    | `code_instruct`  |
+| 8    | `code_ance`      |
+| 9    | `code_publ`      |
+| 10   | `code_priv`      |
 
 ### 1.1 `meta_data` 区：元信息声明
 

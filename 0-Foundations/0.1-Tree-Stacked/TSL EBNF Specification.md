@@ -68,10 +68,12 @@ InstructDecl = OpCode, OperTarg, OperGoal, ";" ;
 
 OpName = IDENT ;
 
-OperTarg | OperGoal = "(", Operand, [{ " ", Operand }], ")" ;
+OperTarg | OperGoal = "(", Operand, [{ Operand }], ")" ;
 
 Operand = IDENT | "(" IDENT ")" ;
 ```
+
+> *Only when "Operand" refers to a `fn` can it not wrapped in `()`.*
 
 #### Function Declaration
 
@@ -89,19 +91,19 @@ TypeSpec = IDENT ;
 
 FnBody = { LangBlock } ;
 
-LangBlock = "'", LangTag, "'", "{", LangCode, "}" ;
+LangBlock = ["@lowered"], "'", LangTag, "'", "{", LangCode, "}" ;
 
 LangTag = "inst_scri" | "c" | "cpp" | "rust" | IDENT ;
 
 LangCode = { ANY_CHAR_EXCEPT_CURLY_BRACE_NESTED } ;
 ```
 
-> *The content of LangCode must be lowered by a registered frontend plugin into a sequence of TSL instructions before being executed by TSLVM or EDSOS that only reference symbols declared in the enclosing function’s parameter and return lists.*
+> *The content of LangCode must be lowered by a registered frontend plugin into a sequence of TSL instructions before being executed by TSLVM or EDSOS that only reference symbols declared in the enclosing function’s parameter and return lists. Which has been lowered gets the tag "@lowered" to notify.*
 
 ## Lexical Elements
 
 ```ebnf
-IDENT       = LETTER, { LETTER | DIGIT | "_" } ;
+IDENT       = { LETTER | DIGIT | "_" | "." } ;
 INTEGER     = DIGIT, { DIGIT } ;
 LETTER      = "a".."z" | "A".."Z" ;
 DIGIT       = "0".."9" ;

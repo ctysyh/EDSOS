@@ -179,18 +179,7 @@ $$
 \text{SegLayout}^n : \text{SegmentID} \rightarrow (\text{start}, \text{end})
 $$
 
-返回各段在虚拟地址空间 $V_n$ 中的起止地址。布局在节点创建时即固定，顺序如下（ABI 稳定）：
-
-| 段序 | 名称             | 内容                     |
-|------|------------------|--------------------------|
-| 0    | `meta_data`      | 运行时元信息（不含 cptm）|
-| 1    | `data_ance`      | data 区 ance 字段        |
-| 2    | `data_publ`      | data 区 publ 字段        |
-| 3    | `data_priv`      | data 区 priv 字段        |
-| 4    | `code_instruct`  | 核心指令字节码           |
-| 5    | `code_ance`      | code 区 ance 声明        |
-| 6    | `code_publ`      | code 区 publ 函数        |
-| 7    | `code_priv`      | code 区 priv 函数        |
+返回各段在虚拟地址空间 $V_n$ 中的起止地址。
 
 ---
 
