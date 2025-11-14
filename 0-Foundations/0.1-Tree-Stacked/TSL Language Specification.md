@@ -1,288 +1,1076 @@
 # TSL Language Specification
 
-> TSL 语言规范
-> 其中节点结构新增加了 `imme` 和 `futu` 的区分，但对应部分内容暂未更新
+---
+
+- [TSL Language Specification](#tsl-language-specification)
+  - [1. Introduction](#1-introduction)
+    - [1.1 Role and Scope](#11-role-and-scope)
+    - [1.2 Relationship to the TS Model](#12-relationship-to-the-ts-model)
+    - [1.3 Document Conventions](#13-document-conventions)
+    - [1.4 Relationship to Foundational and Formal Documents](#14-relationship-to-foundational-and-formal-documents)
+    - [1.5 Document Scope and Responsibilities](#15-document-scope-and-responsibilities)
+  - [2. Lexical Structure](#2-lexical-structure)
+    - [2.1 Character Set](#21-character-set)
+    - [2.2 Identifiers](#22-identifiers)
+    - [2.3 Keywords](#23-keywords)
+    - [2.4 Literals](#24-literals)
+      - [Integer Literals](#integer-literals)
+      - [String Literals](#string-literals)
+    - [2.5 Comments](#25-comments)
+  - [3. Syntactic Structure](#3-syntactic-structure)
+    - [3.1 Top-Level Structure](#31-top-level-structure)
+    - [3.2 Node Declaration](#32-node-declaration)
+    - [3.3 Data Section](#33-data-section)
+    - [3.4 Code Section](#34-code-section)
+      - [3.4.1 Instruction Block (`instruct`)](#341-instruction-block-instruct)
+      - [3.4.2 Function Blocks (`fn`)](#342-function-blocks-fn)
+      - [3.4.3 Language Blocks (`'lang'`)](#343-language-blocks-lang)
+  - [4. Type System Interface](#4-type-system-interface)
+    - [4.1 The Role of `.tsltype`](#41-the-role-of-tsltype)
+    - [4.2 Type Annotations in TSL](#42-type-annotations-in-tsl)
+      - [Field Declarations (in `data` blocks)](#field-declarations-in-data-blocks)
+      - [Function Parameter and Return Lists](#function-parameter-and-return-lists)
+    - [4.3 Linking and Resolution](#43-linking-and-resolution)
+    - [4.4 Pointer Semantics and Arithmetic](#44-pointer-semantics-and-arithmetic)
+      - [4.4.1 Pointer as a Type Capability](#441-pointer-as-a-type-capability)
+      - [4.4.2 Pointer Arithmetic Rules](#442-pointer-arithmetic-rules)
+      - [4.4.3 Pointer Dereferencing Model](#443-pointer-dereferencing-model)
+  - [5. Design Rationale and Usage Patterns *(Informative)*](#5-design-rationale-and-usage-patterns-informative)
+    - [5.1 Philosophy Recap: Syntax Freedom, Semantic Closure](#51-philosophy-recap-syntax-freedom-semantic-closure)
+    - [5.2 The `fn` as a Logical Contract, Not a Function Call](#52-the-fn-as-a-logical-contract-not-a-function-call)
+    - [5.3 Structured Sharing with `ance`: The CTRN Pattern](#53-structured-sharing-with-ance-the-ctrn-pattern)
+    - [5.4 Integrating Legacy Code via `'lang'` Blocks and `.tsltype` Wrappers](#54-integrating-legacy-code-via-lang-blocks-and-tsltype-wrappers)
+- [Appendix](#appendix)
+  - [A. About TSL opcodes](#a-about-tsl-opcodes)
+    - [A.1 Ordinary Opcodes](#a1-ordinary-opcodes)
+      - [A.1.1 Mandatory Specification Requirements](#a11-mandatory-specification-requirements)
+      - [A.1.2 Recommended Best Practices](#a12-recommended-best-practices)
+      - [A.1.3 Interruptible Execution Constraint](#a13-interruptible-execution-constraint)
+    - [A.2 Generic Opcodes](#a2-generic-opcodes)
+      - [A.2.1 `exec` — Execute a Logical Contract](#a21-exec--execute-a-logical-contract)
+      - [A.2.2 `cond` — Conditional Branching](#a22-cond--conditional-branching)
+      - [A.2.3 `cycl` — Controlled Iteration Loop](#a23-cycl--controlled-iteration-loop)
+      - [A.2.4 `wait` — Block Until Signaled](#a24-wait--block-until-signaled)
+      - [A.2.5 `sgnl` — Signal a Blocked Node](#a25-sgnl--signal-a-blocked-node)
+      - [A.2.6 `yiel` — Voluntary Yield](#a26-yiel--voluntary-yield)
+      - [A.2.7 `fnsh` — Terminate Node](#a27-fnsh--terminate-node)
+      - [A.2.8 `warn` — Emit Diagnostic Warning](#a28-warn--emit-diagnostic-warning)
+      - [Summary Table](#summary-table)
+    - [A.3 Structural Opcodes](#a3-structural-opcodes)
+      - [A.3.1 `psh` — Push a New Child Node](#a31-psh--push-a-new-child-node)
+      - [A.3.2 `pop` — Remove a Child Node](#a32-pop--remove-a-child-node)
+      - [A.3.3 `lft` — Lift an External Node into the Ancestry Chain](#a33-lft--lift-an-external-node-into-the-ancestry-chain)
+      - [A.3.4 `mrg` — Merge a Child Node into the Current Node](#a34-mrg--merge-a-child-node-into-the-current-node)
+      - [A.3.5 `dtc` — Detach a New Node by Slicing Off Resources](#a35-dtc--detach-a-new-node-by-slicing-off-resources)
+
 
 ---
 
-## 1. 节点定义语法与结构
+## 1. Introduction
 
-TSL（Tree-Stacked Language）以 **节点（node）** 为基本程序单元。每个节点是一个自包含的结构体，同时承担传统编程语言中“函数”、“栈帧”和“线程”的角色。节点定义采用声明式语法，分为三个逻辑区域：
+### 1.1 Role and Scope
+
+This document, the *TSL Language Specification*, defines the official textual syntax for expressing programs that conform to the Tree-Stacked (TS) computational model. It serves as the primary interface between human developers (and tooling) and the TS runtime system.
+
+The scope of this specification is strictly limited to the **lexical and syntactic structure** of the TSL language, along with the **design intent** behind its constructs. It describes *how* to write a valid TSL program but does not redefine the underlying computational semantics, memory model, or formal guarantees of the TS system. Those foundational aspects are rigorously defined in separate documents: *TS Computational Model* and *TS Formal Semantics and Verification*.
+
+In essence, this specification answers the question: “What is the correct way to write source code that instructs a TS-compliant system to build, evolve, and query a structured computation tree?”
+
+### 1.2 Relationship to the TS Model
+
+TSL is not a conventional programming language that describes a sequence of imperative actions on a flat memory space. Instead, it is a **declarative blueprint** for constructing and manipulating instances of the TS model. Each major syntactic element in TSL directly corresponds to a core concept in the TS model:
+
+| TSL Syntax Element          | TS Model Concept                                  |
+| --------------------------- | ------------------------------------------------- |
+| `node` declaration          | A TS Node — the fundamental unit of structure and execution. |
+| `data { ance / publ / priv }` | The node’s field environment (`𝒟`), which holds its state with explicit visibility and sharing semantics. |
+| `code { instruct }` and `fn` | The node’s instruction sequence (`ℐ`) and control flow logic, executed within the node’s context. |
+| Operations like `psh`, `pop`, `lft`, `exec` | Atomic structural operations that drive the evolution of the TS tree, as formally specified in the TS operational semantics. |
+
+Understanding this mapping is crucial: writing TSL is not about issuing commands to a CPU, but about **declaring how a dynamic, hierarchical structure should be composed and how it should transform itself over time**.
+
+### 1.3 Document Conventions
+
+The following typographical conventions are used throughout this specification:
+
+- **Keywords** (e.g., `node`, `data`, `publ`) appear in monospace font and are part of the TSL lexical grammar.
+- *Non-normative notes*, such as design rationale or usage advice, are presented in italicized paragraphs and do not affect the formal meaning of the language.
+- Normative syntax is defined using Extended Backus-Naur Form (EBNF), with terminal symbols enclosed in double quotes (e.g., `"node"`).
+- References to other specifications (e.g., *TS Computational Model*) are provided where deeper semantic understanding is required.
+
+All examples in this document are illustrative and may omit certain details (such as full type annotations) for clarity, but they adhere to the grammar defined herein.
+
+### 1.4 Relationship to Foundational and Formal Documents
+
+The TSL Language Specification defines the syntactic surface of the language, but its meaning is deeply rooted in a set of foundational computational and formal models. This specification assumes the reader's familiarity with these underlying concepts and serves as a bridge between high-level source code and their precise, low-level semantics.
+
+*   **TS Computational Model**: The fundamental execution paradigm of TSL is the Tree-Stacked (TS) computational model. Every `node` declaration, every structural operation (`psh`, `pop`, `lft`), and the very notion of state residing in fields are direct textual representations of entities and processes defined in the *TS Computational Model* document. This model establishes the core principles of "computation as structural evolution," node-based concurrency, and structured sharing.
+*   **Formal Semantics**: The exact, step-by-step behavior of all TSL operations—both structural (like `Lift(n)`) and data-manipulating (like field resolution)—is formally specified using Separation Logic and operational semantics in the *TS Formal Semantics and Verification* document. This document provides the mathematical proof of correctness for the TS model and, by extension, for well-formed TSL programs.
+*   **Field Resolution and Type System**: The mechanics of how field names are resolved at runtime (especially `ance` fields) and how types govern operations and memory layout are detailed in the *TSL Field Resolution* and *TSL Type System Architecture* documents, respectively. These specifications explain the two-phase pointer dereferencing process, the binding chain fulfillment model, and the contract-based nature of the `.tsltype` system.
+
+This specification **does not redefine** these foundational concepts. Instead, it leverages them to prescribe the correct way to write TSL source code that faithfully encodes them.
+
+### 1.5 Document Scope and Responsibilities
+
+To maintain clarity and focus, the responsibilities of this document are strictly delineated from those of its companion specifications:
+
+*   **This Document **(TSL Language Specification):
+    *   Defines the official lexical and syntactic grammar of TSL (`.tsl` files).
+    *   Specifies the structure of type interface files (`.tsltype`).
+    *   Describes the static (compile-time) rules for program well-formedness, including scoping, name resolution, and basic type compatibility checks based on `.tsltype` contracts.
+    *   Provides high-level descriptions of the intended runtime effects of language constructs, always with reference to the formal documents for precision.
+
+*   **Excluded from This Document**:
+    *   **Formal Operational Semantics**: The precise, mathematical definition of how each TSL instruction transforms the program state is the domain of the *TS Formal Semantics and Verification* document.
+    *   **Proofs of Correctness**: Arguments for the safety, liveness, or Turing-completeness of the TS model are contained within the formal verification literature.
+    *   **Runtime Implementation Details**: The specifics of how a TSL Virtual Machine (TSLVM) or an EDSOS kernel schedules nodes, manages virtual address spaces, or handles traps are outside the scope of this language specification.
+
+---
+
+## 2. Lexical Structure
+
+This chapter defines the lexical grammar of TSL, specifying how source text is decomposed into a sequence of tokens that form the input to the syntactic parser. All lexical rules are derived from the reference EBNF specification.
+
+### 2.1 Character Set
+
+TSL source files must be encoded in UTF-8. The language uses only ASCII characters for its core syntax (keywords, operators, delimiters). Non-ASCII Unicode characters may appear within string literals or comments but must not be used in identifiers.
+
+### 2.2 Identifiers
+
+Identifiers are used to name nodes, fields, functions, and types. They are defined by the following rule:
+
+`IDENT       = { LETTER | DIGIT | "_" | "." } ;`
+
+Identifiers are case-sensitive and may contain letters, digits, underscores (`_`), and dots (`.`). The dot character is primarily intended for hierarchical naming (e.g., `hardware.mmio_reg`).
+
+### 2.3 Keywords
+
+TSL reserves the following keywords, which cannot be used as identifiers:
+
+```
+node, meta_data, data, code,
+imme, futu,
+ance, publ, priv,
+instruct, fn, inst_scri,
+type, size, layout, ops, interop, validators, docs, hints,
+psh, pop, lft, mrg, dtc,
+actv, sgnl, wait, yiel, fnsh, warn,
+exec, cond, cycl,
+native, asm, libcall,
+this,
+true, false
+```
+
+Note: Some keywords (e.g., `type`, `size`) belong to the `.tsltype` language and appear in TSL only via type annotations or embedded constructs.
+
+### 2.4 Literals
+
+#### Integer Literals
+Integer literals consist of one or more decimal digits:
+
+`INTEGER = DIGIT { DIGIT };`
+
+Hexadecimal, octal, or binary literals are not part of the core TSL lexical grammar; such representations must be handled by frontend plugins if needed.
+
+#### String Literals
+String literals are sequences of characters enclosed in double quotes. Escape sequences are supported:
+
+`STRING = '"' { CHAR_NO_QUOTE_OR_ESCAPE | ESCAPE_SEQ } '"';`  
+`ESCAPE_SEQ = "\" ("n" | "t" | "\"" | "\" | "0");`
+
+Valid escape sequences include:
+- `\n` (newline)
+- `\t` (tab)
+- `\"` (double quote)
+- `\\` (backslash)
+- `\0` (null character)
+
+### 2.5 Comments
+
+TSL supports C++-style line comments:
 
 ```tsl
-node example_node {
-    meta_data { ... }
-    data { ... }
-    code { ... }
+// This is a comment
+```
+
+Comments begin with `//` and extend to the end of the line. Block comments (`/* ... */`) are **not** supported in the base TSL lexical grammar.
+
+---
+
+> **Note**: The complete lexical definitions (including auxiliary rules like `LETTER` and `DIGIT`) are formally specified in the *TSL EBNF Specification* document under the section “Lexical Elements”. This chapter serves as a human-readable summary for language users and tool implementers.
+
+---
+
+## 3. Syntactic Structure
+
+This section defines the concrete syntax of the Tree-Stacked Language (TSL). The grammar is presented in Extended Backus–Naur Form (EBNF), as specified in the companion document *TSL EBNF Specification*. All terminal symbols are enclosed in double quotes (`""`); non-terminals are capitalized; square brackets `[X]` denote optional components; and braces `{X}` denote zero or more repetitions.
+
+### 3.1 Top-Level Structure
+
+A TSL program consists of a sequence of node declarations. There is no implicit global scope—every construct must reside within a declared node.
+
+```ebnf
+TSLProgram = { NodeDecl } ;
+```
+
+> **Note (Non-Normative):**  
+> A TSL program describes a static template for constructing a tree of runtime nodes. Execution begins by instantiating one or more root nodes, typically defined in the program.
+
+### 3.2 Node Declaration
+
+Each node is introduced by the `node` keyword followed by an identifier and a body enclosed in braces. The body may contain three optional sections: `meta_data`, `data`, and `code`, in that order.
+
+```ebnf
+NodeDecl = "node", IDENT, "{",
+             [MetaData],
+             [DataSection],
+             [CodeSection],
+           "}" ;
+```
+
+The sections serve distinct purposes:
+- `meta_data`: Declares compile-time metadata (e.g., type references) and reserved runtime fields.
+- `data`: Defines the node’s structured state.
+- `code`: Contains executable logic.
+
+> **Note (Non-Normative):**  
+> The syntactic ordering of sections reflects the stable ABI layout of a runtime node, ensuring deterministic memory organization.
+
+### 3.3 Data Section
+
+> The `data` section declares the persistent state of the node, partitioned into two temporal categories (`imme` for immediate, `futu` for future-resolved) and three visibility categories (`ance`, `publ`, `priv`). Only the visibility categories affect name resolution and sharing semantics.
+
+The `data` section of a node declaration defines its persistent state, organized into fields with explicit visibility and sharing semantics. The structure of this section is as follows:
+
+```ebnf
+DataSection = "data", "{", { DataBlock }, "}" ;
+
+DataBlock = ("imme" | "futu"), "{", { FieldBlock }, "}" ;
+
+FieldBlock = ("ance" | "publ" | "priv"), "{", { FieldDecl }, "}" ;
+
+FieldDecl = TypeSpec, [ArraySize], IDENT, ";" ;
+
+ArraySize = "[", INTEGER, "]" ;
+```
+
+Each field declaration consists of:
+- A **type specifier** (`TypeSpec`), which refers to an external `.tsltype` definition (see §4).
+- An optional **array size** (currently restricted to compile-time constants).
+- An **identifier** naming the field.
+
+Fields are categorized along two orthogonal dimensions: **temporal scope** (`imme` for immediate values, `futu` for future values) and **visibility scope** (`priv`, `publ`, `ance`). Each field must be declared within exactly one of the two temporal categories and one of the three visibility categorie.
+
+*   **`priv` Fields**: These fields constitute the node's private state. They are accessible only from within the node's own `code` section and are invisible to any ancestor or descendant nodes. They are ideal for encapsulating internal implementation details.
+
+*   **`publ` Fields**: These fields represent data owned by the current node that can be explicitly shared with descendant nodes. A `publ` field serves as the **physical source** for data sharing. Its value resides in the memory layout of the declaring node.
+
+*   **`ance` Fields**: This is a cornerstone of the TS model's safe sharing mechanism. An `ance` field **does not allocate any storage**. Instead, it declares a *binding promise*—a contract stating that, at runtime, this field will be linked to a `publ` field of another node (typically an ancestor or a designated data carrier).
+
+    The resolution of an `ance` field reference is a deterministic process. At compile time, the compiler constructs a binding dependency graph to verify type consistency across the entire chain. At runtime, any access to an `ance` field triggers a recursive lookup that either:
+    1.  Successfully resolves to a unique physical storage location `(m, f_publ)`, where `f_publ` is a `publ` field of some node `m`, enabling zero-copy access; or
+    2.  Fails if the promise remains unfulfilled (i.e., no `lft` operation has anchored the chain to a `publ` field), resulting in a runtime error or a blocking state depending on the execution policy.
+
+    This formal resolution procedure, including its termination and uniqueness guarantees, is defined in detail in the **TSL Field Resolution** document under the function `Resolve(n, f)`.
+
+All field names within a single node's `data` section **MUST** be unique, regardless of their category (`priv`/`publ`/`ance`). The type of each field, specified by `TypeSpec`, is resolved against the type environment established by the referenced `.tsltype` files (see Section 4).
+
+### 3.4 Code Section
+
+The `code` section contains all executable content of the node, organized into instruction blocks and named functions.
+
+```ebnf
+CodeSection = "code", "{",
+                [InstructBlock],
+                [AnceBlock],
+                [PublBlock],
+                [PrivBlock]
+              "}" ;
+
+InstructBlock = "instruct", "{", { InstDecl }, "}" ;
+AnceBlock     = "ance",     "{", { FnDecl }, "}" ;
+PublBlock     = "publ",     "{", { FnDecl }, "}" ;
+PrivBlock     = "publ",     "{", { FnDecl }, "}" ;
+```
+
+#### 3.4.1 Instruction Block (`instruct`)
+
+The `instruct` block holds the main linear sequence of operations executed when the node is scheduled. Each instruction consists of an opcode and two operand lists for source and destination. Their execution is controlled by `pc` (program counter) of the node.
+
+```ebnf
+InstructBlock = "instruct", "{", { InstDecl }, "}" ;
+
+InstDecl = OpCode, OperTarg, OperGoal, ";" ;
+
+OpCode = IDENT ;
+
+OperTarg = "(", Operand, { Operand }, ")" ;
+OperGoal = "(", Operand, { Operand }, ")" ;
+
+Operand = "(" IDENT ")" ;
+```
+
+Operands refer to field names declared in the node’s `data` section. Parentheses around an identifier in an operand (e.g., `(x)`) are **ALWAYS** required.
+
+*   **Ordinary Opcodes**: Opcodes like `add`, `mul`, `and`, and `cpy` are Ordinary Opcodes. Their legality and precise runtime behavior are **entirely determined by the types of their operands in the scope of the data type of the `OperTarg`**. The compiler consults the `.tsltype` definitions to verify that the requested operation is supported (i.e., listed in the type's `ops` set) and to generate the correct low-level code (e.g., a native instruction, a library call, or a lowered instruction sequence). TSL specifies 12 *recommended* Ordinary Opcodes, along with best practice guidelines for any custom Ordinary Opcodes, as detailed in Appendix A.1.
+
+*   **Generic Opcodes**: Some operators are part of TSL's reserved language operators, including `exec`, `cond` and `cycl`. They have special meanings and formats, falling under the exceptional cases difined here, as detailed in Appendix A.2.
+
+*   **Structural Opcodes**: Certain opcodes directly correspond to atomic operations on the TS tree structure itself. Their static and dynamic semantics are tightly coupled to the TS Computational Model. A complete list of these opcodes is provided in Appendix A.3.
+
+#### 3.4.2 Function Blocks (`fn`)
+
+Named instruction subsequences are declared using the `fn` keyword. A function has an explicit parameter list and return list, which serve as a *binding contract*—not as runtime stack frames.
+
+```ebnf
+FnDecl = "fn", IDENT,
+         "(", [ParamList], ")", "=>", "(", [RetList], ")",
+         ( "{", FnBody, "}" | ";" ) ;
+
+ParamList = Param, { ",", Param } ;
+RetList   = Param, { ",", Param } ;
+
+Param = "(", TypeSpec, ")", IDENT ;
+
+FnBody = { LangBlock } ;
+```
+
+> **Note (Normative):**
+> A function may be defined inline (with a body) or left abstract (terminated by `;`), typically for external library bindings.
+
+The parameter and return lists of a `fn` serve as **binding slots**. When a `fn` is invoked via the `exec` instruction, the caller provides concrete field names from its own context to bind to these slots. Execution then jumps directly to the `fn`'s instruction sequence, operating on the caller's original data without any stack frame creation or data copying.
+
+#### 3.4.3 Language Blocks (`'lang'`)
+
+To support interoperability and developer ergonomics, function bodies may embed code from other languages within quoted language blocks.
+
+```ebnf
+LangBlock = [ "@lowered" ], "'", LangTag, "'", "{", LangCode, "}" ;
+
+LangTag = "inst_scri" | "c" | "cpp" | "rust" | IDENT ;
+
+LangCode = { ANY_CHAR_EXCEPT_CURLY_BRACE_NESTED } ;
+```
+
+The `LangTag` identifies the embedded language dialect. The contents of `LangCode` are opaque to the TSL parser but must adhere to the following contract:
+
+> **Lowering Contract (Normative):**
+> The embedded code must be translatable by a registered frontend plugin into a sequence of TSL instructions that reference **only** the symbols declared in the enclosing function’s parameter and return lists. Once lowered, the block should be marked with the `@lowered` annotation to indicate it is ready for execution by the TSLVM or EDSOS runtime.
+
+> **Note (Non-Normative):**
+> The `'inst_scri'` dialect is reserved for direct TSL instruction sequences and requires no lowering.
+
+---
+
+## 4. Type System Interface
+
+The TSL language does not embed a built-in type system. Instead, it interfaces with an external, declarative type description mechanism based on `.tsltype` files. This design enables zero-runtime-overhead execution while preserving rich compile-time semantics for layout, operation selection, and interoperability.
+
+### 4.1 The Role of `.tsltype`
+
+All types referenced in TSL source code are defined externally in `.tsltype` files. A `.tsltype` file provides a complete, machine-readable specification of a type’s:
+- Memory layout (size, field offsets),
+- Supported operations (e.g., `add`, `mul`, `set`),
+- Interoperability rules (e.g., implicit conversions, pointer compatibility),
+- Validation constraints (compile-time and runtime),
+- Documentation and optimization hints.
+
+The TSL compiler consumes these `.tsltype` definitions during compilation to:
+- Compute field offsets within node data segments,
+- Validate that applied operations are supported by the operand types,
+- Generate correct lowering sequences (e.g., intrinsic calls, assembly mappings),
+- Enforce structural safety guarantees derived from the TS computational model.
+
+> **Note**: The syntax and semantics of `.tsltype` files are defined in a separate document, *The `.tsltype` Language Specification*. This section only describes how TSL *uses* those definitions.
+
+### 4.2 Type Annotations in TSL
+
+In TSL source code, types appear exclusively as **annotations** on fields and function parameters/returns. The syntax for a type annotation is:
+
+```
+(TypeName) identifier
+```
+
+This form is used in two contexts:
+
+#### Field Declarations (in `data` blocks)
+```tsl
+data {
+    ance {
+        BufferHandle shared_buffer;
+    }
+    publ {
+        u32 counter;
+        Vec3f position;
+        hardware::mmio_reg control_reg;
+    }
 }
 ```
 
-实际运行时的具体布局在节点创建时即固定，顺序如下（ABI 稳定）：
+Here, `u32`, `Vec3f`, and `hardware::mmio_reg` are identifiers resolved against available `.tsltype` definitions. They are used without parentheses.
 
-| 段序 | 名称             |
-|------|------------------|
-| 0    | `meta_data`      |
-| 1    | `data_futu_ance` |
-| 2    | `data_futu_publ` |
-| 3    | `data_futu_priv` |
-| 4    | `data_imme_ance` |
-| 5    | `data_imme_publ` |
-| 6    | `data_imme_priv` |
-| 7    | `code_instruct`  |
-| 8    | `code_ance`      |
-| 9    | `code_publ`      |
-| 10   | `code_priv`      |
-
-### 1.1 `meta_data` 区：元信息声明
-
-- **类型元信息（cptm）**：声明本节点使用的类型定义（如 `@T_i32`），用于编译期类型检查。支持语法糖复用 TS 根节点或外部配置文件，以简化书写并保证类型一致性。
-- **运行时字段（rntm）**：如 `state`（ready/running/blocked/zombie/error）、`capability`（访问权限）、`refcount`（引用计数）等，由运行时系统管理。
-
-### 1.2 `data` 区：结构化状态存储
-
-节点的状态完全由其 `data` 段承载，分为三类字段，具有严格的作用域语义：
-- `ance`：**祖先引用字段**，不持有实际存储，仅表示对其他节点中某字段的引用承诺；
-- `publ`：**公开字段**，本节点拥有实际存储，可被子孙节点通过绑定机制访问；
-- `priv`：**私有字段**，仅在本节点内部可见，子孙节点无法访问。
-
-> 示例：
-> ```tsl
-> data {
->     ance { int x; bool flag; }
->     publ { int buffer; }
->     priv { int temp; }
-> }
-> ```
-
-### 1.3 `code` 区：执行逻辑载体
-
-- `instruct`：核心指令序列，按顺序执行，其执行由 $\mathtt{pc}$ 记录；
-- 函数块：按 `fn`（命名指令块）组织，本质是带标签的指令子序列；
-- 函数参数与返回值仅为接口契约注解，无运行时语义。
-
-> 示例：
-> ```tsl
-> code {
->     instruct { add buffer 0x1; finish this 0; }
->     ance { lib hardware; fn __hardware_checksum (int) => (int); }
->     publ { fn add_int ((int)a, (int)b) => ((int)result) { result = a + b; } }
->     priv { fn submit_er () => () { inst_scri { warn this 0; } } }
-> }
-> ```
-
----
-
-## 2. 字段模型与作用域规则
-
-TSL 的字段解析基于 **显式声明 + 静态作用域**，杜绝隐式行为。
-
-### 2.1 三类字段的语义
-
-| 字段类型 | 存储位置 | 可见性 | 用途 |
-|--------|--------|--------|------|
-| `priv` | 本节点 `data_priv` 段 | 仅本节点 | 封装私有状态，确保信息隐藏 |
-| `publ` | 本节点 `data_publ` 段 | 本节点 + 绑定到它的子孙 | 对外数据接口，共享源头 |
-| `ance` | 无本地存储 | 仅本节点 | 声明对外部字段的依赖契约 |
-
-### 2.2 字段查找优先级
-
-当在节点内引用字段名 `f` 时，按以下顺序解析：
-1. 若 `f ∈ dom(priv) ∪ dom(publ)` → 直接使用本节点字段；
-2. 若 `f ∈ dom(ance)` → 沿绑定链递归解析至真实 `publ` 字段；
-3. 否则 → 编译错误（无效字段）。
-
-> **关键原则**：任何对非本地字段的访问，必须通过 `ance` 块显式声明。
-
----
-
-## 3. 指令与函数语义
-
-### 3.1 `fn`：命名指令块，非传统函数
-
+#### Function Parameter and Return Lists
 ```tsl
-fn add_int ((int)a, (int)b) => ((int)result) {
-    result = a + b;
-}
-```
-- 参数 `(a, b)` 和返回值 `result` 是命名指令块内作用域的代名，需在调用时显式绑定数据段中的已有字段；
-- 实际执行时不创建新栈帧，仅跳转至该指令块起始地址；
-- 允许递归调用；
-- 编译器将其视为带符号标签的连续指令序列。
-
-### 3.2 `exe`：同节点内跳转
-
-```tsl
-exe ((x, y) (add_buffer)) add_int;
-```
-- 语义：跳转至 `add_int` 指令块入口；
-- **零上下文切换**：不改变 capability 域、祖链、TLB 视图；
-- 绑定后，指令块直接访问、修改相关字段。
-
-> 与传统 `call` 的本质区别：`exe` 是 **结构内指令地址跳转**，而非栈帧切换。
-
-### 3.3 循环与递归策略
-
-- **循环**：通过 `cycl` + `exe` 实现同节点内重复执行，无额外开销；
-- **尾递归**：优化为循环；
-- **非尾递归**：必须使用 `push` 创建新节点，以保证祖链正确性和避免栈溢出。
-
----
-
-## 4. 结构化共享机制
-
-TSL 通过 **显式绑定** 实现安全、高效的跨节点数据共享，取代传统指针、全局变量或 shared_ptr。
-
-### 4.1 两阶段绑定模型
-
-- **阶段一：声明与预绑定（`push` 时）**  
-  父节点创建子节点时，可将其自身的 `ance` 字段（即使未履行）绑定给子节点：
-  ```tsl
-  push child (ChildType () (parent_field => child_field) ());
-  ```
-  效果：`child.child_field` 与 `parent.parent_field` 形成绑定链。
-
-- **阶段二：履行承诺（`lift` 时）**  
-  当父节点获得真实数据源后，通过 `lift` 将其绑定到自身 `ance` 字段：
-  ```tsl
-  lift data_source ((source_field => local_ance_field));
-  ```
-  效果：
-  - `local_ance_field` 解析为 `data_source.source_field`；
-  - 所有绑定到该字段的子孙节点自动获得解析能力；
-  - 整个绑定链指向同一物理存储，实现 **零拷贝共享**。
-
-### 4.2 典型模式：CTRN（Cross Tree-Stacked Reference Node）
-
-- CTRN 是仅含 `publ` 字段的纯数据节点（如 `example_ctrn`）；
-- 作为共享缓冲区，可以被多个不同 TS 实例的节点各自绑定；
-- 生命周期由引用计数管理，自动回收。
-
----
-
-## 5. 类型系统设计理念（文字描述）
-
-TSL 采用 **外置、契约式、零运行时开销** 的类型系统：
-
-- **类型即元数据**：类型不是语言语法的一部分，而是编译器提示（compiler hints）；
-- **自由优先于安全**：不内置运行时类型检查或竞态防护，依赖实际编码保障安全；
-- **性能导向**：生成代码无类型 tag，无动态分派；
-- **可扩展性**：支持任意用户定义类型（如 `u8`, `f16`, `simd4x32`），只需提供元信息（大小、操作集、互操作规则）；
-- **Opcode 类型无关**：`add`、`cpy` 等指令本身无类型，合法性由上下文字段类型决定。
-
----
-
-## 6. 内存与指针模型（文字描述）
-
-### 6.1 节点虚拟地址空间 $V_n$
-
-每个节点拥有一个私有的、逻辑连续的虚拟地址空间 $V_n = [0, L_n)$，布局严格按以下 **8 段顺序** 固定（ABI 级别稳定）：
-
-| 段序 | 名称 | 内容 |
-|------|------|------|
-| 0 | `meta_data` | 运行时元字段（`cptm` 不保留） |
-| 1 | `data_ance` | `ance` 字段（远程引用） |
-| 2 | `data_publ` | `publ` 字段（本地存储） |
-| 3 | `data_priv` | `priv` 字段（本地存储） |
-| 4 | `code_instruct` | 核心指令字节码 |
-| 5 | `code_ance` | `ance` 函数（远程引用/lib） |
-| 6 | `code_publ` | `publ` 函数（本地存储） |
-| 7 | `code_priv` | `priv` 函数（本地存储） |
-
-> 所有字段在 $V_n$ 中拥有确定偏移，如同 C struct。
-
-### 6.2 指针语义
-
-- 指针值 = `(虚拟地址 v, 源节点 n_src)`；
-- 支持指针算术：`p + k` 仅修改虚拟地址分量；
-- 解引用时，先定位 `v` 所属字段，再根据字段类型决定是否触发跨节点解析；
-- 越界访问由 TSLVM 的 guard pages 或 trap handler 捕获。
-
-### 6.3 高级应用场景
-
-- **跨字段数组**：将 `ance_a.x` 和 `ance_b.y` 视为连续 `i32` 数组；
-- **动态代码组装**：通过 `code.ance` 中的 `fn` 的声明顺序构建虚拟指令流；
-- **零拷贝共享**：多个子节点通过不同 $V_n$ 视图访问同一远程字段。
-
----
-
-## 7. 典型编程示例解析
-
-### 7.1 主节点：生成随机数并校验
-
-```tsl
-node example_main {
-    data {
-        publ { int x, y, add_buffer, checksum; bool is_no_extra_op; }
-        priv { int add_buffer; } // 遮蔽父 publ，仅本节点使用
-    }
-    code {
-        instruct {
-            exe (((0x1), (0x10)) (x)) hardware::random_int;
-            exe (((0x1), (0x10)) (y)) hardware::random_int;
-            add add_buffer (x, y);
-            exe ((add_buffer) (checksum)) hardware::hardware_checksum;
-            // 创建子任务，绑定字段
-            push add_op (example_check_add ()
-                (add_buffer => add_buffer)
-                (x => x) (y => y)
-                (checksum => checksum)
-                (is_no_extra_op => is_no_extra_op)
-                (hardware::hardware_checksum => __hardware_checksum)
-            );
-            pop add_op 0; // 等待子任务结束
-            cond (is_no_extra_op)
-                ({ exe (() ()) submit_ac; })
-                ({ exe (() ()) submit_er; });
-        }
-        // 私有函数块
-        priv {
-            fn submit_ac() => () { signal example_add_ac all; finish this 0; }
-            fn submit_er() => () { err this 0; }
-        }
-        ance { lib hardware; } // 声明外部库依赖
-    }
+fn compute_hash ((BufferHandle) buf, (u64) len) => ((u64) hash) {
+    // ...
 }
 ```
 
-### 7.2 子节点：校验并可能扩展计算
+These annotations serve as **interface contracts**. They do not introduce local storage; instead, they declare the expected type of the bound field at the call site. The TSL compiler uses these annotations to:
+- Verify type compatibility during `exec` or `'lang'` block lowering,
+- Select appropriate opcodes or library calls (via the `.tsltype`’s `ops` section).
 
-```tsl
-node example_check_add {
-    data {
-        ance { int add_buffer, x, y, checksum; bool is_no_extra_op; }
-        publ { bool is_right; }
-        priv { int checksum_buffer; }
-    }
-    code {
-        instruct {
-            // 创建缓冲区 CTRN
-            push buffer_node (example_ctrn () () ());
-            // 履行承诺：将 buffer_node.a 绑定到自己的 add_buffer
-            lift buffer_node ((a => add_buffer));
-            // 执行加法（直接操作 buffer_node.a）
-            exe ((x, y) (add_buffer)) add_int;
-            // 校验结果
-            exe ((add_buffer, checksum, __hardware_checksum) (checksum_buffer, is_right)) check;
-            cpy is_right is_no_extra_op;
-            // 条件性扩展操作
-            push extra_op (example_extra_add () (add_buffer => add_buffer) ());
-            pop extra_op;
-            // 重新校验
-            exe ((add_buffer) (checksum_buffer)) __hardware_checksum;
-            and is_right (checksum_buffer, checksum);
-            and is_no_extra_op (is_right, is_no_extra_op);
-            finish this 0;
-        }
-        // ...
+### 4.3 Linking and Resolution
+
+Type resolution follows a hierarchical, module-like path convention. When the compiler encounters a type name such as `hardware::mmio_reg`, it searches for a corresponding `.tsltype` file using an implementation-defined search path (e.g., standard library paths, project-local `types/` directories).
+
+The resolution process yields a **type descriptor** containing all metadata defined in the `.tsltype` file. This descriptor is then used throughout compilation for:
+- **Layout computation**: Determining the byte/bit size and alignment of fields.
+- **Opcode validation**: Ensuring that an instruction like `add %x %y %z` is only emitted if the `.tsltype` for the underlying type includes an `add` operation in its `ops` block.
+- **Interoperability checking**: Validating cross-type assignments or bindings (e.g., whether a `(u32)` can be implicitly converted to `(i64)` per the `interop` rules).
+
+Crucially, **no type information is retained at runtime**. The generated TSLVM bytecode or native code contains only raw memory accesses and operation dispatches—no type tags, vtables, or dynamic checks. All safety and correctness must be ensured at compile time through the `.tsltype` contract.
+
+> **Design Principle**: *Types are compile-time contracts, not runtime entities.* This aligns with TSL’s goal of providing bare-metal performance while enabling high-level reasoning through external verification tools and disciplined composition.
+
+### 4.4 Pointer Semantics and Arithmetic
+
+In TSL, pointers are not a primitive language construct but a **derived capability** granted to specific types through their `.tsltype` definition. The creation, manipulation, and dereferencing of pointers are governed entirely by the type system contract.
+
+#### 4.4.1 Pointer as a Type Capability
+A type `T` can support pointer operations if and only if its `.tsltype` file explicitly declares this capability. This is done in the `interop` section by defining a corresponding pointer type, for example:
+```tsltype
+// In i32.tsltype
+interop {
+    pointer_type = ptr_i32;
+}
+```
+The existence of `ptr_i32` (itself a type with its own `.tsltype` definition) enables the use of the address-of operator (`&`) on fields of type `i32` and allows opcodes like `set` and `get` to operate on values of type `ptr_i32`.
+
+#### 4.4.2 Pointer Arithmetic Rules
+Pointer arithmetic (e.g., `p + k`) is permitted if the pointer's underlying `.tsltype` defines the necessary operations (`add`, `sub`) in its `ops` block and includes the `pointer_arithmetic` property. The semantics of the arithmetic—specifically, whether the integer offset `k` is scaled by the size of the pointed-to type—are defined by this property.
+
+For instance, the `.tsltype` for `ptr_i32` might contain:
+```tsltype
+// In ptr_i32.tsltype
+ops {
+    add {
+        pointer_arithmetic = true; // Implies scaling by sizeof(i32)
+        magnification_times = 4;   // Equal to sizeof(i32)
+        // ... other implementation details (native, asm, etc.)
     }
 }
 ```
+This contract ensures that `p + 1` advances the pointer by 4 bytes (the size of an `i32`), providing array-like semantics.
 
-> **执行流程说明**：
-> 1. `example_father` 创建 `son`，绑定未履行的 `example_value`；
-> 2. 创建 `buffer_node`（CTR）；
-> 3. `lift` 将 `buffer_node.a` 绑定到 `father.example_value`；
-> 4. 绑定链自动建立：`son.example_element → father.example_value → buffer_node.a`；
-> 5. `son` 中的指令现在可安全操作远程字段。
+#### 4.4.3 Pointer Dereferencing Model
+Dereferencing a pointer follows a strict two-phase resolution process to maintain memory safety and structural integrity:
+1.  **Local Field Location**: The virtual address embedded in the pointer value is resolved to a specific field declaration within its source node's virtual address space.
+2.  **Remote Binding Resolution**: If the located field is an `ance` field, the standard binding resolution protocol is invoked to find its ultimate physical storage location in a `publ` field of another node.
+
+This formal process guarantees that every valid pointer dereference ultimately accesses a well-defined, writable memory location. The complete formal definition of this process is provided in the **TSL Language Formal Semantics and Verification** document under the section "Pointer Value Resolution: `Deref(p)`".
+
+---
+
+## 5. Design Rationale and Usage Patterns *(Informative)*
+
+This section explains the underlying motivations behind key syntactic and semantic choices in TSL. It is non-normative—its purpose is to guide correct usage, foster intuition, and illustrate idiomatic patterns that leverage the full power of the Tree-Stacked computational model.
+
+### 5.1 Philosophy Recap: Syntax Freedom, Semantic Closure
+
+TSL embodies a dual-layer design principle:
+
+> **“Syntax freedom, semantic closure.”**
+
+At the surface level, TSL permits expressive flexibility: users may embed familiar high-level languages (e.g., C, Rust) within `'lang'` blocks, define rich type interfaces via `.tsltype` files, and organize logic using named instruction blocks (`fn`). This lowers the barrier to adoption and enables reuse of existing codebases.
+
+However, beneath this syntactic freedom lies a strictly closed semantic model. Every construct must ultimately compile down to a sequence of **pure TSL instructions** that:
+- Operate only on fields declared in the current node’s `data` section,
+- Respect the structural boundaries of the TS tree,
+- Never introduce hidden state or implicit control flow.
+
+This duality ensures that while developers enjoy ergonomic syntax, the resulting program remains analyzable, verifiable, and faithful to the TS model’s guarantees of safety, determinism, and structured concurrency.
+
+### 5.2 The `fn` as a Logical Contract, Not a Function Call
+
+In traditional languages, a function call implies stack allocation, parameter copying, and return-value handling. In TSL, a `fn` declaration is fundamentally different:
+
+```tsl
+fn add_int ((i32)a, (i32)b) => ((i32)result) { ... }
+```
+
+Here, `a`, `b`, and `result` are **not local variables**—they are *logical binding slots*. When invoked via `exec`, the caller explicitly maps concrete fields from its own `data` section (or ancestors’) onto these slots:
+
+```tsl
+exec ((x, y) (sum)) add_int;
+```
+
+This binds `x → a`, `y → b`, and `sum → result`. No new stack frame is created; execution simply jumps to the labeled instruction block within the same node. The `fn` body operates directly on the caller’s storage.
+
+This design enables:
+- **Zero-overhead abstraction**: No calling convention, no register saving.
+- **Composability**: Any field compatible with the slot’s type can be bound.
+- **Clarity**: All data dependencies are explicit at the call site.
+
+> **Best Practice**: Use `fn` to encapsulate reusable logic that operates on well-defined input/output contracts. Avoid treating it like a traditional subroutine with side effects beyond its declared interface.
+
+### 5.3 Structured Sharing with `ance`: The CTRN Pattern
+
+The `ance` field category is central to TSL’s approach to safe, zero-copy data sharing. Unlike pointers or global variables, `ance` fields declare *intent* without assuming implementation—they are promises to be fulfilled later via structural operations.
+
+A canonical pattern is the **Cross Tree-Stacked Reference Node (CTRN)**:
+
+1. A dedicated node (e.g., `buffer_ctrn`) is created with only `publ` fields:
+   ```tsl
+   node buffer_ctrn {
+       data { publ { u8[4096] payload; } }
+   }
+   ```
+
+2. Other nodes declare `ance` fields expecting such data:
+   ```tsl
+   node consumer {
+       data { ance { u8[4096] input_buffer; } }
+   }
+   ```
+
+3. During execution, a parent node uses `psh` to pre-bind and `lft` to fulfill:
+   ```tsl
+   psh c (consumer () (my_buffer => input_buffer));
+   lft buf_node ((payload => my_buffer));
+   ```
+
+After `lft`, all descendants bound to `my_buffer` transparently access `buf_node.payload`—no copying, no pointer arithmetic, no dangling references.
+
+This pattern scales naturally across trees, supports dynamic reconfiguration, and integrates seamlessly with reference counting for automatic lifetime management.
+
+> **Anti-Pattern**: Declaring shared state in `priv` or relying on global naming conventions. Always use `publ` + `ance` + explicit binding for inter-node communication.
+
+### 5.4 Integrating Legacy Code via `'lang'` Blocks and `.tsltype` Wrappers
+
+TSL does not require rewriting the world. Instead, it provides a structured pathway to integrate legacy components:
+
+1. **Wrap external types** in `.tsltype` files, specifying size, layout, and available operations:
+   ```tsltype
+   type MyLegacyStruct {
+       name = "MyLegacyStruct";
+       size = 64 bytes;
+       ops { sin { libcall = "__legacy_sin_f64"; } }
+   }
+   ```
+
+2. **Embed legacy logic** in `'lang'` blocks inside `fn` definitions:
+   ```tsl
+   fn compute ((f64)x) => ((f64)y) {
+       'c' {
+           y = legacy_math_library_sin(x);
+       }
+   }
+   ```
+
+3. The frontend compiler **lowers** this block into a sequence of TSL instructions that respect the `fn`’s contract (only reading `x`, only writing `y`).
+
+This approach allows gradual migration: legacy code runs unchanged inside a “TS shell,” while new code benefits from structural safety and concurrency primitives. Over time, performance-critical or safety-sensitive parts can be rewritten natively in TSL instruct.
+
+> **Key Contract**: The content of any `'lang'` block must be lowered into instructions that reference **only** the symbols declared in the enclosing `fn`’s parameter and return lists. Violations break semantic closure and are rejected at compile time.
+
+---
+
+# Appendix
+
+## A. About TSL opcodes
+
+### A.1 Ordinary Opcodes
+
+Ordinary Opcodes are user-defined, type-bound data transformation primitives that operate exclusively on node fields and immediate literals. They represent pure, side-effect-free computations whose semantics are fully determined by the static types of their operands and the target platform’s capabilities. Unlike structural or control-flow instructions, Ordinary Opcodes do not alter the TS tree topology, scheduling state, or execution context.
+
+Each Ordinary Opcode is declared within the `ops` block of a `.tsltype` file and invoked in TSL source code via an `InstDecl` of the form:
+
+```tsl
+OpCode OperTarg OperGoal;
+```
+
+where:
+- **OperTarg** (operation target) is a parenthesized list of field identifiers that receive the result(s) of the computation (the *write set*),
+- **OperGoal** (operation goal) is a parenthesized list of field identifiers and/or integer literals that provide input values (the *read set*).
+
+This read-write separation originates from the small-step operational semantics of the TS model: an instruction computes a deterministic value from its *OperGoal* and writes the outcome to its *OperTarg*. This model enables precise alias analysis, memory safety verification, and structured concurrency reasoning.
+
+#### A.1.1 Mandatory Specification Requirements
+
+Every custom Ordinary Opcode **must** explicitly define the following in its `.tsltype` declaration:
+
+1. **Name**  
+   - Must be a valid TSL identifier (see §2.2).  
+   - Recommended naming convention: `TypeName.opName` (e.g., `Matrix4x4.inv`). The dot (`.`) is part of the name string and carries no syntactic meaning; it serves only as a human-readable logically namespace delimiter.
+
+2. **Operand Signature**  
+   - Must specify one or more *overloads*, each defining:
+     - An ordered list of input types (`inputs`), which may include:
+       - Concrete type references (e.g., `(int32_t)`),
+       - The special pseudo-type `integer` to match compile-time integer literals.
+     - An ordered list of output types (`outputs`), all of which must be concrete types.
+   - Syntax (EBNF-compatible):
+     ```ebnf
+     overload {
+         inputs = "(" [ TypeSpec [Ident] { "," TypeSpec [Ident] } ] ")";
+         outputs = "(" [ TypeSpec [Ident] { "," TypeSpec [Ident] } ] ")";
+     }
+     ```
+
+3. **Target Implementations**  
+   - For each supported backend, provide either:
+     - A native assembly template (with placeholders like `${field}` or `${imm}`), or
+     - A TSLVM fallback expressed as a sequence of standard-library `instruct` statements.
+   - If an operation is atomic on a given platform, the corresponding native entry **must** be prefixed with `@atomic`.
+
+4. **Type Consistency Rule**  
+   - At compile time, the frontend resolves an opcode by:
+     1. Identifying the static type $T$ of the first field in `OperTarg`,
+     2. Loading the `.tsltype` file for $T$,
+     3. Selecting the first overload whose `inputs` match the actual operand types (fields → exact type match; literals → match `integer`).
+   - Mismatch results in a compilation error.
+
+#### A.1.2 Recommended Best Practices
+
+While not mandatory, the following greatly enhance correctness, portability, and developer experience:
+
+- Provide a small-step operational semantics rule (informative).
+- Document behavior for mixed-type or variable-arity scenarios via multiple overloads.
+- Enumerate expected error conditions (e.g., division by zero) with suggested diagnostics.
+- List undefined behaviors and specify whether runtime checks or hardware traps are relied upon.
+- Include optional `lifecycle` hints indicating when input fields are read and when output fields may be safely overwritten (useful for advanced register allocation and interruption analysis).
+
+#### A.1.3 Interruptible Execution Constraint
+
+To ensure that non-atomic Ordinary Opcodes can be safely interrupted (e.g., by `yiel`, trap, or preemption) and later resumed without loss of correctness, their implementation must satisfy a strict bound on execution state size.
+
+Let:
+- $W$ be the target platform’s register width in bits (e.g., 64 for x86_64),
+- $\mathcal{T}$ be the set of distinct field identifiers in `OperTarg`,
+- $\text{size}(f)$ be the bit-width of field $f$ (derived from its `.tsltype` `size` attribute),
+- $N_{\text{imm}}$ be the number of integer literals in `OperGoal`.
+
+Then the total state required to save and restore the opcode’s execution context—comprising a micro-program counter, control flags, and all intermediate values—must not exceed:
+
+$$
+\left( \sum_{f \in \mathcal{T}} \text{size}(f) \right) + (N_{\text{gpr}} - N_{\text{imm}}) \times W \quad \text{bits}.
+$$
+
+**Rationale**:
+- Fields in `OperTarg` serve as *scratch space*: their final value is defined by the opcode, so their storage may be reused for intermediate computation.
+- Fields in `OperGoal` are read-only and contribute no scratch capacity.
+- Each immediate literal requires one register slot for loading, hence the $N_{\text{imm}} \times W$ term.
+- The general-purpose registers of the target platform provide the space of $N_{\text{gpr}} \times W$.
+
+For in-place operations (e.g., `add (a) (a b)`), the initial value of `a` must be preserved until it is fully consumed. During that interval, `a` does not count as available scratch space. The above formula uses a conservative worst-case estimate that assumes all `OperTarg` fields are usable as scratch after their initial values (if any) are read.
+
+Operations marked `@atomic` are exempt from this constraint, as they execute uninterruptibly.
+
+Violations of this constraint render the opcode ineligible for use in interruptible contexts and will cause compilation failure unless explicitly overridden by a `@uninterruptible` annotation (not recommended for general use).
+
+---
+
+### A.2 Generic Opcodes
+
+Generic Opcodes are a set of reserved instructions in TSL that govern control flow, subroutine invocation, and interactions with the runtime scheduler (TSLVM or EDSOS). Unlike Ordinary Opcodes (which operate on field values) or Structural Opcodes (which manipulate tree topology), Generic Opcodes define *how execution proceeds* or *how a node communicates with the execution environment*.  
+
+All Generic Opcodes appear as standalone instructions within an `instruct` block.
+
+**Eight Generic Opcodes are exposed to TSL programs**, listed below.
+
+> **Note**: The opcodes `wait`, `sgnl`, `yiel`, and `warn` do not perform computation directly. Instead, they serve as *system calls* to the underlying runtime (TSLVM/EDSOS), whose precise behavior may be platform-dependent but must conform to the abstract semantics defined here.
+
+#### A.2.1 `exec` — Execute a Logical Contract
+
+- Effect
+  - Transfers control to a named `fn` declaration, binding the caller’s fields to the function’s formal parameters and return slots.
+
+- Syntax
+```ebnf
+ExecDecl = "exec", "(", "(", [ParamList], ")", "(", [RetList], ")", ")", FnName, ";" ;
+ParamList = Field, { ",", Field } ;
+RetList   = Field, { ",", Field } ;
+Field     = IDENT | "(" IDENT ")" ;
+FnName    = IDENT | "(" IDENT ")" ;
+```
+
+- Semantics
+  - No stack frame is created; execution occurs *in place* using the actual fields provided.
+  - The parameter list `(ParamList)` maps positionally to the `fn`’s input parameters; the return list `(RetList)` maps to its output fields.
+  - If the target `fn` is abstract (declared with `;`), the runtime may lower it via `'lang'` blocks or native linkage.
+  - The `FnName` must resolve to a visible function within the current node or an ancestor.
+
+- Example
+```tsl
+exec ((a, b)) ((sum)) Adder;
+```
+
+#### A.2.2 `cond` — Conditional Branching
+
+- Effect
+  - Evaluates a boolean field and runs one of two labels based on its value.
+
+- Syntax
+```ebnf
+CondDecl = "cond", "(", Flag, ")", "(", "(", TrueLabel, ")", "(", FalseLabel, ")", ")", ";" ;
+Flag        = BOOLEAN ;
+TrueLabel   = InstructDecl | ExecDecl ;
+FalseLabel  = InstructDecl | ExecDecl ;
+```
+
+> **Note**: `TrueLabel` or `FalseLabel` contains exactly independent instruction.
+
+- Semantics
+  - The `Flag` must name a field of Boolean type in the current node’s data section.
+  - Execution continues at `TrueLabel` if the flag is `true`; otherwise, at `FalseLabel`.
+  - Both labels must be statically resolvable (no computed gotos).
+
+- Example
+```tsl
+cond (ready) ((exec ((a, b) (c, d)) process;) (exec ((a, e) (c, d)) retry;));
+```
+
+#### A.2.3 `cycl` — Controlled Iteration Loop
+
+- Effect
+  - Repeatedly executes a step action until a termination flag becomes true.
+
+- Syntax
+```ebnf
+CyclDecl = "cycl", "(", DoneFlag, ")", "(", StepAction, ")", ";" ;
+DoneFlag   = BOOLEAN ;
+StepAction = InstructDecl | ExecDecl ;
+```
+
+- Semantics
+  - Before each iteration, the runtime checks `DoneFlag`. If `true`, the loop exits.
+  - Otherwise, control transfers to `StepAction`, which must eventually cause `DoneFlag` to become `true`.
+  - This construct enforces structured, verifiable loops aligned with the TS model’s deterministic execution.
+
+- Example
+```tsl
+cycl (loop_done) (exec ((prm, buf) (a, loop_done)) loop_body;);
+```
+
+---
+
+#### A.2.4 `wait` — Block Until Signaled
+
+- Effect
+  - Suspends the current node by transitioning it to the `blocked` state. Execution resumes only after a corresponding `sgnl`.
+
+- Syntax
+```ebnf
+WaitDecl = "wait", "(", WaitEvent, ")", "(", [Options], ")", ";" ;
+WaitEvent = IDENT ;
+Options   = IDENT ;
+```
+
+- Semantics
+  - This is a system call to the scheduler (TSLVM/EDSOS).
+  - The `WaitEvent` identifier *declare* an event name to wait somebody `sgnl` the same event name.
+  - The optional `Options` identifier may specify synchronization policy as defined by the runtime.
+  - While blocked, the node retains all field values, register values and program counter state.
+  - The node remains ineligible for scheduling until signaled.
+
+- Constraints
+  - `Options` must be recognized by the target runtime; unrecognized identifiers result in undefined behavior (typically treated as a default wait).
+
+- Example
+```tsl
+wait (input_ready) ();
+```
+
+---
+
+#### A.2.5 `sgnl` — Signal a Blocked Node
+
+- Effect
+  - Wakes up one or more nodes waiting on the specified event name, transitioning them from `blocked` to `ready`.
+
+- Syntax
+```ebnf
+SgnlDecl = "sgnl", "(", WaitEvent, ")", "(", [Options], ")", ";" ;
+WaitEvent = IDENT ;
+Options  = IDENT ;
+```
+
+- Semantics
+  - Dual to `wait`; forms a synchronization pair.
+  - The `WaitEvent` identifier must match the one used in a corresponding wait.
+  - If no node is waiting on that event name, `sgnl` will be in undefined behavior inside TSL, but the runtime (TSLVM or EDSOS) may give an precise definition.
+  - The exact signaling policy (e.g., FIFO, broadcast) is runtime-defined.
+
+- Example
+```tsl
+sgnl (input_ready) ();
+```
+
+---
+
+#### A.2.6 `yiel` — Voluntary Yield
+
+- Effect
+  - Temporarily pauses the current node and returns it to the `ready` state, allowing other nodes to run.
+
+- Syntax
+```ebnf
+YielDecl = "yiel", "(", [Options], ")", ";" ;
+Options  = IDENT ;
+```
+
+- Semantics
+  - The node retains its execution context and will be rescheduled later.
+  - `Options` may hint at yield priority or reason (e.g., `"io"`), but interpretation is runtime-specific.
+  - Unlike `wait`, no external signal is required for resumption.
+
+- Example
+```tsl
+yiel (cooperative);
+```
+
+---
+
+#### A.2.7 `fnsh` — Terminate Node
+
+- Effect
+  - Marks the current node as `finished`, ending its execution permanently.
+
+- Syntax
+```ebnf
+FnshDecl = "fnsh", ";" ;
+```
+
+- Semantics
+  - Corresponds to the `[Finish]` rule in the TS Formal Semantics.
+  - The node is removed from the scheduler’s ready queue.
+  - Children remain unaffected.
+  - No instructions may follow `fnsh` in the same basic block.
+
+- Example
+```tsl
+fnsh;
+```
+
+---
+
+#### A.2.8 `warn` — Emit Diagnostic Warning
+
+- Effect
+  - Places the specified nodes into the `error` state and logs a diagnostic warning.
+
+- Syntax
+```ebnf
+WarnDecl = "warn", "(", NodeNames, ")", ";" ;
+NodeNames = NodeRef, { ",", NodeRef } ;
+NodeRef   = "this" | "all" | IDENT ;
+```
+
+- Semantics
+  - `this`: refers to the current node.
+  - `all`: refers to all nodes in the current task tree (TS).
+  - `IDENT`: refers to a direct child node (i.e., pushed by this node); names are resolved in the local namespace only.
+  - Affected nodes transition to `error` and are typically excluded from further scheduling.
+  - Intended for unrecoverable or policy-violating conditions.
+
+- Constraints
+  - Only descendants (or self) can be targeted; cross-tree or ancestor references are disallowed.
+  - The runtime may log additional context (e.g., exec trace, field dump).
+
+- Example
+```tsl
+warn (worker1, worker2, this);
+```
+
+---
+
+#### Summary Table
+
+| Opcode | Syntax Form                     | Category       | State Change               | Scheduler Interaction |
+|--------|----------------------------------|----------------|----------------------------|------------------------|
+| `exec` | `exec ((p)) ((r)) fn;`         | Control Flow   | None                       | No                     |
+| `cond` | `cond (f) ((t)) ((e));`          | Control Flow   | None                       | No                     |
+| `cycl` | `cycl (done) (step);`            | Control Flow   | None                       | No                     |
+| `wait` | `wait (eve) (opt);`                    | System Call    | → `blocked`                | Yes                    |
+| `sgnl` | `sgnl (eve) (opt);`                    | System Call    | `blocked` → `ready` (target) | Yes                    |
+| `yiel` | `yiel (opt);`                    | System Call    | → `ready` (self, paused)   | Yes                    |
+| `fnsh` | `fnsh;`                          | Termination    | → `finished`               | Yes                    |
+| `warn` | `warn (n1, n2, ...);`            | Diagnostics    | → `error` (specified nodes)| Yes                    |
+
+---
+
+### A.3 Structural Opcodes
+
+Structural Opcodes are a class of instructions in the Tree-Stacked Language (TSL) that directly manipulate the hierarchical structure of the computation tree as defined by the TS Computational Model. These opcodes correspond to atomic structural transformations formally specified in the *TS Formal Semantics and Verification* document. Unlike data-manipulating or control-flow instructions, Structural Opcodes alter node relationships, ownership, and binding topologies. Their execution is governed by separation logic rules that ensure memory safety, binding consistency, and structural integrity.
+
+Each Structural Opcode must appear within an `instruct` block and operates relative to the lexical and runtime context of the enclosing node. All identifiers referenced in operand lists must be resolvable within the current node’s scope at compile time.
+
+The following five opcodes constitute the complete set of Structural Opcodes.
+
+---
+
+#### A.3.1 `psh` — Push a New Child Node
+
+- Effect
+  - Instantiates a new child node from a named template and attaches it to the current node. The new node inherits specified resources via explicit binding declarations, establishing zero-copy shared access to the parent’s `publ` or resolved `ance` fields and functions.
+
+- Syntax
+```ebnf
+PshDecl = "psh", NodeName, "(", NodeTemplate,
+          "(", [MetadataList], ")",
+          "(", [DataList], ")",
+          "(", [CodeList], ")",
+        ")", ";" ;
+
+NodeName       = IDENT ;
+NodeTemplate   = IDENT ;
+
+MetadataList   = BindingPairMeta, { ",", BindingPairMeta } ;
+BindingPairMeta = "(", ThisMetaEntry, "=>", SonMetaEntry, ")" ;
+
+DataList       = BindingPairData, { ",", BindingPairData } ;
+BindingPairData = "(", ThisDataField, "=>", SonDataField, ")" ;
+
+CodeList       = BindingPairCode, { ",", BindingPairCode } ;
+BindingPairCode = "(", ThisCodeFn, "=>", SonCodeFn, ")" ;
+
+ThisMetaEntry  = IDENT ;
+SonMetaEntry   = IDENT ;
+ThisDataField  = IDENT ;
+SonDataField   = IDENT ;
+ThisCodeFn     = IDENT ;
+SonCodeFn      = IDENT ;
+```
+
+- Semantics
+  - `NodeName` is a locally scoped alias for the newly created child, valid only within the current node’s instruction sequence. It does not persist as a runtime attribute of the child node.
+  - `NodeTemplate` refers to a previously declared `node` template (e.g., `node Worker { ... }`).
+  - Each binding pair `(A => B)` asserts that field/function `A` in the current node (which must be `publ` or `ance`) satisfies the binding contract of `B` in the child (which must be declared as `ance`).
+  - `priv`-declared entities cannot appear on the left-hand side of any binding.
+  - This instruction corresponds to the **Push(n, N\*, D\*, I\*)** rule in the TS formal semantics.
+
+---
+
+#### A.3.2 `pop` — Remove a Child Node
+
+- Effect
+  - Requests the removal of a specified child node. By default, the operation blocks until the child has entered the `zombie` state (via `fnsh`), ensuring graceful termination.
+
+- Syntax
+```ebnf
+PopDecl = "pop", NodeName, ["(", Options, ")"], ";" ;
+
+NodeName = IDENT ;
+Options  = IDENT ;  // Reserved for future extensions (e.g., "force")
+```
+
+- Semantics
+  - `NodeName` must refer to a direct child previously introduced via `psh` or accessible through structural context.
+  - The default behavior enforces cooperative cleanup: if the child is not yet a zombie, the current node yields until it becomes one.
+  - The optional `Options` parameter is reserved for future control over termination policy (e.g., non-blocking or forced deallocation), but is unused in the current version.
+  - This instruction implements the **Pop(n)** structural rule, requiring the target node to be safely reclaimable.
+
+---
+
+#### A.3.3 `lft` — Lift an External Node into the Ancestry Chain
+
+- Effect
+  - Dynamically binds an existing external node as a logical ancestor of the current node by resolving its `ance` field promises against the external node’s `publ` exports.
+
+- Syntax
+```ebnf
+LftDecl = "lft", NodeName,
+          "(", [DataList], ")",
+          "(", [CodeList], ")",
+          ";" ;
+
+DataList = BindingPairData, { ",", BindingPairData } ;
+BindingPairData = "(", HisDataField, "=>", ThisDataField, ")" ;
+
+CodeList = BindingPairCode, { ",", BindingPairCode } ;
+BindingPairCode = "(", HisCodeFn, "=>", ThisCodeFn, ")" ;
+
+HisDataField = IDENT ;
+ThisDataField = IDENT ;
+HisCodeFn = IDENT ;
+ThisCodeFn = IDENT ;
+```
+
+- Semantics
+  - `NodeName` refers to an already-instantiated node visible in the current lexical or runtime context (e.g., passed via inter-node coordination).
+  - Each `(X => Y)` binds `X` (a `publ` entity in the external node) to `Y` (an `ance` declaration in the current node).
+  - No new node is created; only binding resolution is performed.
+  - This realizes the **Lift(n)** transformation, enabling safe, dynamic cross-subtree data sharing without copying.
+  - Failure to resolve all `ance` promises results in a runtime error or blocked state, per the binding fulfillment protocol.
+
+---
+
+#### A.3.4 `mrg` — Merge a Child Node into the Current Node
+
+- Effect
+  - Absorbs the state and code of a specified child node into the current node’s virtual address space via structural append, then destroys the child.
+
+- Syntax
+```ebnf
+MrgDecl = "mrg", NodeName, ["(", Options, ")"], ";" ;
+
+NodeName = IDENT ;
+Options  = STRING ;  // Layout directives (e.g., "{ insert_after: 'buf' }")
+```
+
+- Semantics
+  - `NodeName` identifies the child node to be merged, which must be a direct descendant.
+  - The merge performs a **structural concatenation** of the child’s `publ` data segment and function bindings into the parent’s layout.
+  - The `Options` string provides hints for memory layout reorganization (e.g., insertion points), interpreted by the TSLVM or lowering backend.
+  - After merging, the child node itself will be *not exist*, and its resources become part of the current node.
+  - This corresponds to the **Merge(n, n\*)** rule.
+
+---
+
+#### A.3.5 `dtc` — Detach a New Node by Slicing Off Resources
+
+- Effect
+  - Creates a new child node by transferring ownership of selected resources from the current node, effectively slicing off a portion of its state.
+
+- Syntax
+```ebnf
+DtcDecl = "dtc", NodeName,
+          "(", NodeTemplateForSon,
+            "(", [MetadataList], ")",
+            "(", [DataList], ")",
+            "(", [CodeList], ")",
+          ")",
+          ["(", Options, ")"],
+          ";" ;
+
+NodeName           = IDENT ;
+NodeTemplateForSon = IDENT ;
+
+MetadataList = BindingPairMeta, { ",", BindingPairMeta } ;
+BindingPairMeta = "(", ThisMetaEntry, "-->", SonMetaEntry, ")" ;
+
+DataList = BindingPairData, { ",", BindingPairData } ;
+BindingPairData = "(", ThisDataField, "-->", SonDataField, ")" ;
+
+CodeList = BindingPairCode, { ",", BindingPairCode } ;
+BindingPairCode = "(", ThisCodeFn, "-->", SonCodeFn, ")" ;
+
+ThisMetaEntry  = IDENT ;
+SonMetaEntry   = IDENT ;
+ThisDataField  = IDENT ;
+SonDataField   = IDENT ;
+ThisCodeFn     = IDENT ;
+SonCodeFn      = IDENT ;
+Options        = STRING ;  // Reserved for detachment policies
+```
+
+- Semantics
+  - `NodeName` is a local alias for the newly detached node.
+  - `NodeTemplateForSon` specifies the template of the detached node.
+  - The `-->` operator denotes **resource handoff**: the left-hand entity (`ThisX`) is transferred to satisfy the right-hand declaration (`SonX`) in the new node, and their attribute must be matched.
+  - Unlike `psh` (which uses `=>` for sharing), `-->` implies transfer of exclusive ownership.
+  - This implements the **Detach(n, N\*, D\*, I\*)** transformation, enabling dynamic task decomposition and state migration.
+  - Post-detachment, the original fields in the parent will become invalid, disappear inside the parent's namespace.
 
 ---

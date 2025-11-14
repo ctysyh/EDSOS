@@ -153,14 +153,14 @@ Merge(n, n*)
 
 ---
 
-#### 5. Divide(n, F_D, F_I)
+#### 5. Detach(n, F_D, F_I)
 
 > 从 `n` 分离出新子节点 `n*`，携带 `F_D ⊆ D`, `F_I ⊆ I`。
 
 **Rule**:
 ```text
 { node(n, N, S, A, C, D, I, op) ∗ n* ↦ _ }
-Divide(n, F_D, F_I)
+Detach(n, F_D, F_I)
 { 
   node(n, N, S, A, C ∪ {n*}, D \ F_D, I \ F_I, op) ∗
   node(n*, N*, ready, [n]++A, ∅, F_D, F_I, op*)
@@ -228,7 +228,7 @@ Warn(n)
 
 ### 执行的形式化
 
-#### 11. `exe label env`
+#### 11. `exec label env`
 
 > 跳转至同节点内标签 `label` 对应的代码块（视为子过程）
 
@@ -236,7 +236,7 @@ $$
 \frac{
 \text{code}(label) \Downarrow_{\text{inner}} (\Delta\mathcal{D}, \Delta H)
 }{
-\langle \texttt{exe label}, n, H \rangle \Downarrow \langle n[\mathcal{D} \mapsto \mathcal{D} \oplus \Delta\mathcal{D}], H \oplus \Delta H \rangle
+\langle \texttt{exec label}, n, H \rangle \Downarrow \langle n[\mathcal{D} \mapsto \mathcal{D} \oplus \Delta\mathcal{D}], H \oplus \Delta H \rangle
 }
 $$
 
