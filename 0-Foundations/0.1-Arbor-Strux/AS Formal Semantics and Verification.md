@@ -1,6 +1,6 @@
-# TS Formal Semantics and Verification
+# AS Formal Semantics and Verification
 
-> TS 形式语义与验证基础
+> AS 形式语义与验证基础
 
 ## 基础设定
 
@@ -11,7 +11,7 @@
 - `P ∗ Q`：堆空间可分割为满足 `P` 和 `Q` 的两部分；
 - `emp`：空堆；
 - `↦`：点对点映射（如 `n ↦ (N, S, A, C, D, I, op)` 表示节点 `n` 的完整七元组内容）；
-- `tree(n)`：表示以 `n` 为根的良构 TS 子树（递归谓词）；
+- `tree(n)`：表示以 `n` 为根的良构 AS 子树（递归谓词）；
 - 所有操作均为 in-place 修改；
 - 节点标识符 `n` 视为地址，可作为 heap location 使用；
 - 假设存在一个全局 capability 环境 Γ，但此处暂不显式建模，仅关注结构与状态。
@@ -44,7 +44,7 @@ tree(n) ≜
 > - $\mathcal{C}$ **不是集合**，而是**子树**（subtree）。
 > - 这意味着 $\mathcal{C}$ 本身是一个**递归数据结构**，可形式化为：
 > - $\mathcal{C} ::= \emptyset \mid \{ n_1, n_2, \dots, n_m \} \quad \text{where each } n_i \text{ is a Node with its own } n_i.\mathcal{C}$
-> - 因此，整个 TS 结构 $\mathcal{T}$ 就是**单个根节点及其 $\mathcal{C}$**。
+> - 因此，整个 AS 结构 $\mathcal{T}$ 就是**单个根节点及其 $\mathcal{C}$**。
 
 ---
 
@@ -64,7 +64,7 @@ tree(n) ≜
 
 ---
 
-## TS 模型的形式化
+## AS 模型的形式化
 
 ### 操作的形式化（Separation Logic Style）
 
@@ -311,7 +311,7 @@ $$
 
 ## 完备性证明
 
-### TS 模型的图灵完备性
+### AS 模型的图灵完备性
 
 > - 使用 $\mathcal{D} = (r_0, r_1, ..., r_k)$ 模拟寄存器；
 > - 使用 `cycl` 实现循环，`cond` 实现条件跳转；

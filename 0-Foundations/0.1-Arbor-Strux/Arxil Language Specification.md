@@ -1,11 +1,11 @@
-# TSL Language Specification
+# Arxil Language Specification
 
 ---
 
-- [TSL Language Specification](#tsl-language-specification)
+- [Arxil Language Specification](#arxil-language-specification)
   - [1. Introduction](#1-introduction)
     - [1.1 Role and Scope](#11-role-and-scope)
-    - [1.2 Relationship to the TS Model](#12-relationship-to-the-ts-model)
+    - [1.2 Relationship to the AS Model](#12-relationship-to-the-as-model)
     - [1.3 Document Conventions](#13-document-conventions)
     - [1.4 Relationship to Foundational and Formal Documents](#14-relationship-to-foundational-and-formal-documents)
     - [1.5 Document Scope and Responsibilities](#15-document-scope-and-responsibilities)
@@ -27,7 +27,7 @@
       - [3.4.3 Language Blocks (`'lang'`)](#343-language-blocks-lang)
   - [4. Type System Interface](#4-type-system-interface)
     - [4.1 The Role of `.tsltype`](#41-the-role-of-tsltype)
-    - [4.2 Type Annotations in TSL](#42-type-annotations-in-tsl)
+    - [4.2 Type Annotations in Arxil](#42-type-annotations-in-arxil)
       - [Field Declarations (in `data` blocks)](#field-declarations-in-data-blocks)
       - [Function Parameter and Return Lists](#function-parameter-and-return-lists)
     - [4.3 Linking and Resolution](#43-linking-and-resolution)
@@ -41,7 +41,7 @@
     - [5.3 Structured Sharing with `ance`: The CTRN Pattern](#53-structured-sharing-with-ance-the-ctrn-pattern)
     - [5.4 Integrating Legacy Code via `'lang'` Blocks and `.tsltype` Wrappers](#54-integrating-legacy-code-via-lang-blocks-and-tsltype-wrappers)
 - [Appendix](#appendix)
-  - [A. About TSL opcodes](#a-about-tsl-opcodes)
+  - [A. About Arxil opcodes](#a-about-arxil-opcodes)
     - [A.1 Ordinary Opcodes](#a1-ordinary-opcodes)
       - [A.1.1 Mandatory Specification Requirements](#a11-mandatory-specification-requirements)
       - [A.1.2 Recommended Best Practices](#a12-recommended-best-practices)
@@ -70,70 +70,70 @@
 
 ### 1.1 Role and Scope
 
-This document, the *TSL Language Specification*, defines the official textual syntax for expressing programs that conform to the Tree-Stacked (TS) computational model. It serves as the primary interface between human developers (and tooling) and the TS runtime system.
+This document, the *Arxil Language Specification*, defines the official textual syntax for expressing programs that conform to the Tree-Stacked (AS) computational model. It serves as the primary interface between human developers (and tooling) and the AS runtime system.
 
-The scope of this specification is strictly limited to the **lexical and syntactic structure** of the TSL language, along with the **design intent** behind its constructs. It describes *how* to write a valid TSL program but does not redefine the underlying computational semantics, memory model, or formal guarantees of the TS system. Those foundational aspects are rigorously defined in separate documents: *TS Computational Model* and *TS Formal Semantics and Verification*.
+The scope of this specification is strictly limited to the **lexical and syntactic structure** of the Arxil language, along with the **design intent** behind its constructs. It describes *how* to write a valid Arxil program but does not redefine the underlying computational semantics, memory model, or formal guarantees of the AS system. Those foundational aspects are rigorously defined in separate documents: *AS Computational Model* and *AS Formal Semantics and Verification*.
 
-In essence, this specification answers the question: “What is the correct way to write source code that instructs a TS-compliant system to build, evolve, and query a structured computation tree?”
+In essence, this specification answers the question: “What is the correct way to write source code that instructs a AS-compliant system to build, evolve, and query a structured computation tree?”
 
-### 1.2 Relationship to the TS Model
+### 1.2 Relationship to the AS Model
 
-TSL is not a conventional programming language that describes a sequence of imperative actions on a flat memory space. Instead, it is a **declarative blueprint** for constructing and manipulating instances of the TS model. Each major syntactic element in TSL directly corresponds to a core concept in the TS model:
+Arxil is not a conventional programming language that describes a sequence of imperative actions on a flat memory space. Instead, it is a **declarative blueprint** for constructing and manipulating instances of the AS model. Each major syntactic element in Arxil directly corresponds to a core concept in the AS model:
 
-| TSL Syntax Element          | TS Model Concept                                  |
+| Arxil Syntax Element          | AS Model Concept                                  |
 | --------------------------- | ------------------------------------------------- |
-| `node` declaration          | A TS Node — the fundamental unit of structure and execution. |
+| `node` declaration          | A AS Node — the fundamental unit of structure and execution. |
 | `data { ance / publ / priv }` | The node’s field environment (`𝒟`), which holds its state with explicit visibility and sharing semantics. |
 | `code { instruct }` and `fn` | The node’s instruction sequence (`ℐ`) and control flow logic, executed within the node’s context. |
-| Operations like `psh`, `pop`, `lft`, `exec` | Atomic structural operations that drive the evolution of the TS tree, as formally specified in the TS operational semantics. |
+| Operations like `psh`, `pop`, `lft`, `exec` | Atomic structural operations that drive the evolution of the AS tree, as formally specified in the AS operational semantics. |
 
-Understanding this mapping is crucial: writing TSL is not about issuing commands to a CPU, but about **declaring how a dynamic, hierarchical structure should be composed and how it should transform itself over time**.
+Understanding this mapping is crucial: writing Arxil is not about issuing commands to a CPU, but about **declaring how a dynamic, hierarchical structure should be composed and how it should transform itself over time**.
 
 ### 1.3 Document Conventions
 
 The following typographical conventions are used throughout this specification:
 
-- **Keywords** (e.g., `node`, `data`, `publ`) appear in monospace font and are part of the TSL lexical grammar.
+- **Keywords** (e.g., `node`, `data`, `publ`) appear in monospace font and are part of the Arxil lexical grammar.
 - *Non-normative notes*, such as design rationale or usage advice, are presented in italicized paragraphs and do not affect the formal meaning of the language.
 - Normative syntax is defined using Extended Backus-Naur Form (EBNF), with terminal symbols enclosed in double quotes (e.g., `"node"`).
-- References to other specifications (e.g., *TS Computational Model*) are provided where deeper semantic understanding is required.
+- References to other specifications (e.g., *AS Computational Model*) are provided where deeper semantic understanding is required.
 
 All examples in this document are illustrative and may omit certain details (such as full type annotations) for clarity, but they adhere to the grammar defined herein.
 
 ### 1.4 Relationship to Foundational and Formal Documents
 
-The TSL Language Specification defines the syntactic surface of the language, but its meaning is deeply rooted in a set of foundational computational and formal models. This specification assumes the reader's familiarity with these underlying concepts and serves as a bridge between high-level source code and their precise, low-level semantics.
+The Arxil Language Specification defines the syntactic surface of the language, but its meaning is deeply rooted in a set of foundational computational and formal models. This specification assumes the reader's familiarity with these underlying concepts and serves as a bridge between high-level source code and their precise, low-level semantics.
 
-*   **TS Computational Model**: The fundamental execution paradigm of TSL is the Tree-Stacked (TS) computational model. Every `node` declaration, every structural operation (`psh`, `pop`, `lft`), and the very notion of state residing in fields are direct textual representations of entities and processes defined in the *TS Computational Model* document. This model establishes the core principles of "computation as structural evolution," node-based concurrency, and structured sharing.
-*   **Formal Semantics**: The exact, step-by-step behavior of all TSL operations—both structural (like `Lift(n)`) and data-manipulating (like field resolution)—is formally specified using Separation Logic and operational semantics in the *TS Formal Semantics and Verification* document. This document provides the mathematical proof of correctness for the TS model and, by extension, for well-formed TSL programs.
-*   **Field Resolution and Type System**: The mechanics of how field names are resolved at runtime (especially `ance` fields) and how types govern operations and memory layout are detailed in the *TSL Field Resolution* and *TSL Type System Architecture* documents, respectively. These specifications explain the two-phase pointer dereferencing process, the binding chain fulfillment model, and the contract-based nature of the `.tsltype` system.
+*   **AS Computational Model**: The fundamental execution paradigm of Arxil is the Tree-Stacked (AS) computational model. Every `node` declaration, every structural operation (`psh`, `pop`, `lft`), and the very notion of state residing in fields are direct textual representations of entities and processes defined in the *AS Computational Model* document. This model establishes the core principles of "computation as structural evolution," node-based concurrency, and structured sharing.
+*   **Formal Semantics**: The exact, step-by-step behavior of all Arxil operations—both structural (like `Lift(n)`) and data-manipulating (like field resolution)—is formally specified using Separation Logic and operational semantics in the *AS Formal Semantics and Verification* document. This document provides the mathematical proof of correctness for the AS model and, by extension, for well-formed Arxil programs.
+*   **Field Resolution and Type System**: The mechanics of how field names are resolved at runtime (especially `ance` fields) and how types govern operations and memory layout are detailed in the *Arxil Field Resolution* and *Arxil Type System Architecture* documents, respectively. These specifications explain the two-phase pointer dereferencing process, the binding chain fulfillment model, and the contract-based nature of the `.tsltype` system.
 
-This specification **does not redefine** these foundational concepts. Instead, it leverages them to prescribe the correct way to write TSL source code that faithfully encodes them.
+This specification **does not redefine** these foundational concepts. Instead, it leverages them to prescribe the correct way to write Arxil source code that faithfully encodes them.
 
 ### 1.5 Document Scope and Responsibilities
 
 To maintain clarity and focus, the responsibilities of this document are strictly delineated from those of its companion specifications:
 
-*   **This Document **(TSL Language Specification):
-    *   Defines the official lexical and syntactic grammar of TSL (`.tsl` files).
+*   **This Document **(Arxil Language Specification):
+    *   Defines the official lexical and syntactic grammar of Arxil (`.tsl` files).
     *   Specifies the structure of type interface files (`.tsltype`).
     *   Describes the static (compile-time) rules for program well-formedness, including scoping, name resolution, and basic type compatibility checks based on `.tsltype` contracts.
     *   Provides high-level descriptions of the intended runtime effects of language constructs, always with reference to the formal documents for precision.
 
 *   **Excluded from This Document**:
-    *   **Formal Operational Semantics**: The precise, mathematical definition of how each TSL instruction transforms the program state is the domain of the *TS Formal Semantics and Verification* document.
-    *   **Proofs of Correctness**: Arguments for the safety, liveness, or Turing-completeness of the TS model are contained within the formal verification literature.
-    *   **Runtime Implementation Details**: The specifics of how a TSL Virtual Machine (TSLVM) or an EDSOS kernel schedules nodes, manages virtual address spaces, or handles traps are outside the scope of this language specification.
+    *   **Formal Operational Semantics**: The precise, mathematical definition of how each Arxil instruction transforms the program state is the domain of the *AS Formal Semantics and Verification* document.
+    *   **Proofs of Correctness**: Arguments for the safety, liveness, or Turing-completeness of the AS model are contained within the formal verification literature.
+    *   **Runtime Implementation Details**: The specifics of how a Arxil Virtual Machine (ArxilVM) or an EDSOS kernel schedules nodes, manages virtual address spaces, or handles traps are outside the scope of this language specification.
 
 ---
 
 ## 2. Lexical Structure
 
-This chapter defines the lexical grammar of TSL, specifying how source text is decomposed into a sequence of tokens that form the input to the syntactic parser. All lexical rules are derived from the reference EBNF specification.
+This chapter defines the lexical grammar of Arxil, specifying how source text is decomposed into a sequence of tokens that form the input to the syntactic parser. All lexical rules are derived from the reference EBNF specification.
 
 ### 2.1 Character Set
 
-TSL source files must be encoded in UTF-8. The language uses only ASCII characters for its core syntax (keywords, operators, delimiters). Non-ASCII Unicode characters may appear within string literals or comments but must not be used in identifiers.
+Arxil source files must be encoded in UTF-8. The language uses only ASCII characters for its core syntax (keywords, operators, delimiters). Non-ASCII Unicode characters may appear within string literals or comments but must not be used in identifiers.
 
 ### 2.2 Identifiers
 
@@ -145,7 +145,7 @@ Identifiers are case-sensitive and may contain letters, digits, underscores (`_`
 
 ### 2.3 Keywords
 
-TSL reserves the following keywords, which cannot be used as identifiers:
+Arxil reserves the following keywords, which cannot be used as identifiers:
 
 ```
 node, meta_data, data, code,
@@ -161,7 +161,7 @@ this,
 true, false
 ```
 
-Note: Some keywords (e.g., `type`, `size`) belong to the `.tsltype` language and appear in TSL only via type annotations or embedded constructs.
+Note: Some keywords (e.g., `type`, `size`) belong to the `.tsltype` language and appear in Arxil only via type annotations or embedded constructs.
 
 ### 2.4 Literals
 
@@ -170,7 +170,7 @@ Integer literals consist of one or more decimal digits:
 
 `INTEGER = DIGIT { DIGIT };`
 
-Hexadecimal, octal, or binary literals are not part of the core TSL lexical grammar; such representations must be handled by frontend plugins if needed.
+Hexadecimal, octal, or binary literals are not part of the core Arxil lexical grammar; such representations must be handled by frontend plugins if needed.
 
 #### String Literals
 String literals are sequences of characters enclosed in double quotes. Escape sequences are supported:
@@ -187,34 +187,34 @@ Valid escape sequences include:
 
 ### 2.5 Comments
 
-TSL supports C++-style line comments:
+Arxil supports C++-style line comments:
 
 ```tsl
 // This is a comment
 ```
 
-Comments begin with `//` and extend to the end of the line. Block comments (`/* ... */`) are **not** supported in the base TSL lexical grammar.
+Comments begin with `//` and extend to the end of the line. Block comments (`/* ... */`) are **not** supported in the base Arxil lexical grammar.
 
 ---
 
-> **Note**: The complete lexical definitions (including auxiliary rules like `LETTER` and `DIGIT`) are formally specified in the *TSL EBNF Specification* document under the section “Lexical Elements”. This chapter serves as a human-readable summary for language users and tool implementers.
+> **Note**: The complete lexical definitions (including auxiliary rules like `LETTER` and `DIGIT`) are formally specified in the *Arxil EBNF Specification* document under the section “Lexical Elements”. This chapter serves as a human-readable summary for language users and tool implementers.
 
 ---
 
 ## 3. Syntactic Structure
 
-This section defines the concrete syntax of the Tree-Stacked Language (TSL). The grammar is presented in Extended Backus–Naur Form (EBNF), as specified in the companion document *TSL EBNF Specification*. All terminal symbols are enclosed in double quotes (`""`); non-terminals are capitalized; square brackets `[X]` denote optional components; and braces `{X}` denote zero or more repetitions.
+This section defines the concrete syntax of the Tree-Stacked Language (Arxil). The grammar is presented in Extended Backus–Naur Form (EBNF), as specified in the companion document *Arxil EBNF Specification*. All terminal symbols are enclosed in double quotes (`""`); non-terminals are capitalized; square brackets `[X]` denote optional components; and braces `{X}` denote zero or more repetitions.
 
 ### 3.1 Top-Level Structure
 
-A TSL program consists of a sequence of node declarations. There is no implicit global scope—every construct must reside within a declared node.
+A Arxil program consists of a sequence of node declarations. There is no implicit global scope—every construct must reside within a declared node.
 
 ```ebnf
-TSLProgram = { NodeDecl } ;
+ArxilProgram = { NodeDecl } ;
 ```
 
 > **Note (Non-Normative):**  
-> A TSL program describes a static template for constructing a tree of runtime nodes. Execution begins by instantiating one or more root nodes, typically defined in the program.
+> A Arxil program describes a static template for constructing a tree of runtime nodes. Execution begins by instantiating one or more root nodes, typically defined in the program.
 
 ### 3.2 Node Declaration
 
@@ -265,13 +265,13 @@ Fields are categorized along two orthogonal dimensions: **temporal scope** (`imm
 
 *   **`publ` Fields**: These fields represent data owned by the current node that can be explicitly shared with descendant nodes. A `publ` field serves as the **physical source** for data sharing. Its value resides in the memory layout of the declaring node.
 
-*   **`ance` Fields**: This is a cornerstone of the TS model's safe sharing mechanism. An `ance` field **does not allocate any storage**. Instead, it declares a *binding promise*—a contract stating that, at runtime, this field will be linked to a `publ` field of another node (typically an ancestor or a designated data carrier).
+*   **`ance` Fields**: This is a cornerstone of the AS model's safe sharing mechanism. An `ance` field **does not allocate any storage**. Instead, it declares a *binding promise*—a contract stating that, at runtime, this field will be linked to a `publ` field of another node (typically an ancestor or a designated data carrier).
 
     The resolution of an `ance` field reference is a deterministic process. At compile time, the compiler constructs a binding dependency graph to verify type consistency across the entire chain. At runtime, any access to an `ance` field triggers a recursive lookup that either:
     1.  Successfully resolves to a unique physical storage location `(m, f_publ)`, where `f_publ` is a `publ` field of some node `m`, enabling zero-copy access; or
     2.  Fails if the promise remains unfulfilled (i.e., no `lft` operation has anchored the chain to a `publ` field), resulting in a runtime error or a blocking state depending on the execution policy.
 
-    This formal resolution procedure, including its termination and uniqueness guarantees, is defined in detail in the **TSL Field Resolution** document under the function `Resolve(n, f)`.
+    This formal resolution procedure, including its termination and uniqueness guarantees, is defined in detail in the **Arxil Field Resolution** document under the function `Resolve(n, f)`.
 
 All field names within a single node's `data` section **MUST** be unique, regardless of their category (`priv`/`publ`/`ance`). The type of each field, specified by `TypeSpec`, is resolved against the type environment established by the referenced `.tsltype` files (see Section 4).
 
@@ -312,11 +312,11 @@ Operand = "(" IDENT ")" ;
 
 Operands refer to field names declared in the node’s `data` section. Parentheses around an identifier in an operand (e.g., `(x)`) are **ALWAYS** required.
 
-*   **Ordinary Opcodes**: Opcodes like `add`, `mul`, `and`, and `cpy` are Ordinary Opcodes. Their legality and precise runtime behavior are **entirely determined by the types of their operands in the scope of the data type of the `OperTarg`**. The compiler consults the `.tsltype` definitions to verify that the requested operation is supported (i.e., listed in the type's `ops` set) and to generate the correct low-level code (e.g., a native instruction, a library call, or a lowered instruction sequence). TSL specifies 12 *recommended* Ordinary Opcodes, along with best practice guidelines for any custom Ordinary Opcodes, as detailed in Appendix A.1.
+*   **Ordinary Opcodes**: Opcodes like `add`, `mul`, `and`, and `cpy` are Ordinary Opcodes. Their legality and precise runtime behavior are **entirely determined by the types of their operands in the scope of the data type of the `OperTarg`**. The compiler consults the `.tsltype` definitions to verify that the requested operation is supported (i.e., listed in the type's `ops` set) and to generate the correct low-level code (e.g., a native instruction, a library call, or a lowered instruction sequence). Arxil specifies 12 *recommended* Ordinary Opcodes, along with best practice guidelines for any custom Ordinary Opcodes, as detailed in Appendix A.1.
 
-*   **Generic Opcodes**: Some operators are part of TSL's reserved language operators, including `exec`, `cond` and `cycl`. They have special meanings and formats, falling under the exceptional cases difined here, as detailed in Appendix A.2.
+*   **Generic Opcodes**: Some operators are part of Arxil's reserved language operators, including `exec`, `cond` and `cycl`. They have special meanings and formats, falling under the exceptional cases difined here, as detailed in Appendix A.2.
 
-*   **Structural Opcodes**: Certain opcodes directly correspond to atomic operations on the TS tree structure itself. Their static and dynamic semantics are tightly coupled to the TS Computational Model. A complete list of these opcodes is provided in Appendix A.3.
+*   **Structural Opcodes**: Certain opcodes directly correspond to atomic operations on the AS tree structure itself. Their static and dynamic semantics are tightly coupled to the AS Computational Model. A complete list of these opcodes is provided in Appendix A.3.
 
 #### 3.4.2 Function Blocks (`fn`)
 
@@ -352,40 +352,40 @@ LangTag = "inst_scri" | "c" | "cpp" | "rust" | IDENT ;
 LangCode = { ANY_CHAR_EXCEPT_CURLY_BRACE_NESTED } ;
 ```
 
-The `LangTag` identifies the embedded language dialect. The contents of `LangCode` are opaque to the TSL parser but must adhere to the following contract:
+The `LangTag` identifies the embedded language dialect. The contents of `LangCode` are opaque to the Arxil parser but must adhere to the following contract:
 
 > **Lowering Contract (Normative):**
-> The embedded code must be translatable by a registered frontend plugin into a sequence of TSL instructions that reference **only** the symbols declared in the enclosing function’s parameter and return lists. Once lowered, the block should be marked with the `@lowered` annotation to indicate it is ready for execution by the TSLVM or EDSOS runtime.
+> The embedded code must be translatable by a registered frontend plugin into a sequence of Arxil instructions that reference **only** the symbols declared in the enclosing function’s parameter and return lists. Once lowered, the block should be marked with the `@lowered` annotation to indicate it is ready for execution by the ArxilVM or EDSOS runtime.
 
 > **Note (Non-Normative):**
-> The `'inst_scri'` dialect is reserved for direct TSL instruction sequences and requires no lowering.
+> The `'inst_scri'` dialect is reserved for direct Arxil instruction sequences and requires no lowering.
 
 ---
 
 ## 4. Type System Interface
 
-The TSL language does not embed a built-in type system. Instead, it interfaces with an external, declarative type description mechanism based on `.tsltype` files. This design enables zero-runtime-overhead execution while preserving rich compile-time semantics for layout, operation selection, and interoperability.
+The Arxil language does not embed a built-in type system. Instead, it interfaces with an external, declarative type description mechanism based on `.tsltype` files. This design enables zero-runtime-overhead execution while preserving rich compile-time semantics for layout, operation selection, and interoperability.
 
 ### 4.1 The Role of `.tsltype`
 
-All types referenced in TSL source code are defined externally in `.tsltype` files. A `.tsltype` file provides a complete, machine-readable specification of a type’s:
+All types referenced in Arxil source code are defined externally in `.tsltype` files. A `.tsltype` file provides a complete, machine-readable specification of a type’s:
 - Memory layout (size, field offsets),
 - Supported operations (e.g., `add`, `mul`, `set`),
 - Interoperability rules (e.g., implicit conversions, pointer compatibility),
 - Validation constraints (compile-time and runtime),
 - Documentation and optimization hints.
 
-The TSL compiler consumes these `.tsltype` definitions during compilation to:
+The Arxil compiler consumes these `.tsltype` definitions during compilation to:
 - Compute field offsets within node data segments,
 - Validate that applied operations are supported by the operand types,
 - Generate correct lowering sequences (e.g., intrinsic calls, assembly mappings),
-- Enforce structural safety guarantees derived from the TS computational model.
+- Enforce structural safety guarantees derived from the AS computational model.
 
-> **Note**: The syntax and semantics of `.tsltype` files are defined in a separate document, *The `.tsltype` Language Specification*. This section only describes how TSL *uses* those definitions.
+> **Note**: The syntax and semantics of `.tsltype` files are defined in a separate document, *The `.tsltype` Language Specification*. This section only describes how Arxil *uses* those definitions.
 
-### 4.2 Type Annotations in TSL
+### 4.2 Type Annotations in Arxil
 
-In TSL source code, types appear exclusively as **annotations** on fields and function parameters/returns. The syntax for a type annotation is:
+In Arxil source code, types appear exclusively as **annotations** on fields and function parameters/returns. The syntax for a type annotation is:
 
 ```
 (TypeName) identifier
@@ -416,7 +416,7 @@ fn compute_hash ((BufferHandle) buf, (u64) len) => ((u64) hash) {
 }
 ```
 
-These annotations serve as **interface contracts**. They do not introduce local storage; instead, they declare the expected type of the bound field at the call site. The TSL compiler uses these annotations to:
+These annotations serve as **interface contracts**. They do not introduce local storage; instead, they declare the expected type of the bound field at the call site. The Arxil compiler uses these annotations to:
 - Verify type compatibility during `exec` or `'lang'` block lowering,
 - Select appropriate opcodes or library calls (via the `.tsltype`’s `ops` section).
 
@@ -429,13 +429,13 @@ The resolution process yields a **type descriptor** containing all metadata defi
 - **Opcode validation**: Ensuring that an instruction like `add %x %y %z` is only emitted if the `.tsltype` for the underlying type includes an `add` operation in its `ops` block.
 - **Interoperability checking**: Validating cross-type assignments or bindings (e.g., whether a `(u32)` can be implicitly converted to `(i64)` per the `interop` rules).
 
-Crucially, **no type information is retained at runtime**. The generated TSLVM bytecode or native code contains only raw memory accesses and operation dispatches—no type tags, vtables, or dynamic checks. All safety and correctness must be ensured at compile time through the `.tsltype` contract.
+Crucially, **no type information is retained at runtime**. The generated ArxilVM bytecode or native code contains only raw memory accesses and operation dispatches—no type tags, vtables, or dynamic checks. All safety and correctness must be ensured at compile time through the `.tsltype` contract.
 
-> **Design Principle**: *Types are compile-time contracts, not runtime entities.* This aligns with TSL’s goal of providing bare-metal performance while enabling high-level reasoning through external verification tools and disciplined composition.
+> **Design Principle**: *Types are compile-time contracts, not runtime entities.* This aligns with Arxil’s goal of providing bare-metal performance while enabling high-level reasoning through external verification tools and disciplined composition.
 
 ### 4.4 Pointer Semantics and Arithmetic
 
-In TSL, pointers are not a primitive language construct but a **derived capability** granted to specific types through their `.tsltype` definition. The creation, manipulation, and dereferencing of pointers are governed entirely by the type system contract.
+In Arxil, pointers are not a primitive language construct but a **derived capability** granted to specific types through their `.tsltype` definition. The creation, manipulation, and dereferencing of pointers are governed entirely by the type system contract.
 
 #### 4.4.1 Pointer as a Type Capability
 A type `T` can support pointer operations if and only if its `.tsltype` file explicitly declares this capability. This is done in the `interop` section by defining a corresponding pointer type, for example:
@@ -468,32 +468,32 @@ Dereferencing a pointer follows a strict two-phase resolution process to maintai
 1.  **Local Field Location**: The virtual address embedded in the pointer value is resolved to a specific field declaration within its source node's virtual address space.
 2.  **Remote Binding Resolution**: If the located field is an `ance` field, the standard binding resolution protocol is invoked to find its ultimate physical storage location in a `publ` field of another node.
 
-This formal process guarantees that every valid pointer dereference ultimately accesses a well-defined, writable memory location. The complete formal definition of this process is provided in the **TSL Language Formal Semantics and Verification** document under the section "Pointer Value Resolution: `Deref(p)`".
+This formal process guarantees that every valid pointer dereference ultimately accesses a well-defined, writable memory location. The complete formal definition of this process is provided in the **Arxil Language Formal Semantics and Verification** document under the section "Pointer Value Resolution: `Deref(p)`".
 
 ---
 
 ## 5. Design Rationale and Usage Patterns *(Informative)*
 
-This section explains the underlying motivations behind key syntactic and semantic choices in TSL. It is non-normative—its purpose is to guide correct usage, foster intuition, and illustrate idiomatic patterns that leverage the full power of the Tree-Stacked computational model.
+This section explains the underlying motivations behind key syntactic and semantic choices in Arxil. It is non-normative—its purpose is to guide correct usage, foster intuition, and illustrate idiomatic patterns that leverage the full power of the Tree-Stacked computational model.
 
 ### 5.1 Philosophy Recap: Syntax Freedom, Semantic Closure
 
-TSL embodies a dual-layer design principle:
+Arxil embodies a dual-layer design principle:
 
 > **“Syntax freedom, semantic closure.”**
 
-At the surface level, TSL permits expressive flexibility: users may embed familiar high-level languages (e.g., C, Rust) within `'lang'` blocks, define rich type interfaces via `.tsltype` files, and organize logic using named instruction blocks (`fn`). This lowers the barrier to adoption and enables reuse of existing codebases.
+At the surface level, Arxil permits expressive flexibility: users may embed familiar high-level languages (e.g., C, Rust) within `'lang'` blocks, define rich type interfaces via `.tsltype` files, and organize logic using named instruction blocks (`fn`). This lowers the barrier to adoption and enables reuse of existing codebases.
 
-However, beneath this syntactic freedom lies a strictly closed semantic model. Every construct must ultimately compile down to a sequence of **pure TSL instructions** that:
+However, beneath this syntactic freedom lies a strictly closed semantic model. Every construct must ultimately compile down to a sequence of **pure Arxil instructions** that:
 - Operate only on fields declared in the current node’s `data` section,
-- Respect the structural boundaries of the TS tree,
+- Respect the structural boundaries of the AS tree,
 - Never introduce hidden state or implicit control flow.
 
-This duality ensures that while developers enjoy ergonomic syntax, the resulting program remains analyzable, verifiable, and faithful to the TS model’s guarantees of safety, determinism, and structured concurrency.
+This duality ensures that while developers enjoy ergonomic syntax, the resulting program remains analyzable, verifiable, and faithful to the AS model’s guarantees of safety, determinism, and structured concurrency.
 
 ### 5.2 The `fn` as a Logical Contract, Not a Function Call
 
-In traditional languages, a function call implies stack allocation, parameter copying, and return-value handling. In TSL, a `fn` declaration is fundamentally different:
+In traditional languages, a function call implies stack allocation, parameter copying, and return-value handling. In Arxil, a `fn` declaration is fundamentally different:
 
 ```tsl
 fn add_int ((i32)a, (i32)b) => ((i32)result) { ... }
@@ -516,7 +516,7 @@ This design enables:
 
 ### 5.3 Structured Sharing with `ance`: The CTRN Pattern
 
-The `ance` field category is central to TSL’s approach to safe, zero-copy data sharing. Unlike pointers or global variables, `ance` fields declare *intent* without assuming implementation—they are promises to be fulfilled later via structural operations.
+The `ance` field category is central to Arxil’s approach to safe, zero-copy data sharing. Unlike pointers or global variables, `ance` fields declare *intent* without assuming implementation—they are promises to be fulfilled later via structural operations.
 
 A canonical pattern is the **Cross Tree-Stacked Reference Node (CTRN)**:
 
@@ -548,7 +548,7 @@ This pattern scales naturally across trees, supports dynamic reconfiguration, an
 
 ### 5.4 Integrating Legacy Code via `'lang'` Blocks and `.tsltype` Wrappers
 
-TSL does not require rewriting the world. Instead, it provides a structured pathway to integrate legacy components:
+Arxil does not require rewriting the world. Instead, it provides a structured pathway to integrate legacy components:
 
 1. **Wrap external types** in `.tsltype` files, specifying size, layout, and available operations:
    ```tsltype
@@ -568,9 +568,9 @@ TSL does not require rewriting the world. Instead, it provides a structured path
    }
    ```
 
-3. The frontend compiler **lowers** this block into a sequence of TSL instructions that respect the `fn`’s contract (only reading `x`, only writing `y`).
+3. The frontend compiler **lowers** this block into a sequence of Arxil instructions that respect the `fn`’s contract (only reading `x`, only writing `y`).
 
-This approach allows gradual migration: legacy code runs unchanged inside a “TS shell,” while new code benefits from structural safety and concurrency primitives. Over time, performance-critical or safety-sensitive parts can be rewritten natively in TSL instruct.
+This approach allows gradual migration: legacy code runs unchanged inside a “AS shell,” while new code benefits from structural safety and concurrency primitives. Over time, performance-critical or safety-sensitive parts can be rewritten natively in Arxil instruct.
 
 > **Key Contract**: The content of any `'lang'` block must be lowered into instructions that reference **only** the symbols declared in the enclosing `fn`’s parameter and return lists. Violations break semantic closure and are rejected at compile time.
 
@@ -578,13 +578,13 @@ This approach allows gradual migration: legacy code runs unchanged inside a “T
 
 # Appendix
 
-## A. About TSL opcodes
+## A. About Arxil opcodes
 
 ### A.1 Ordinary Opcodes
 
-Ordinary Opcodes are user-defined, type-bound data transformation primitives that operate exclusively on node fields and immediate literals. They represent pure, side-effect-free computations whose semantics are fully determined by the static types of their operands and the target platform’s capabilities. Unlike structural or control-flow instructions, Ordinary Opcodes do not alter the TS tree topology, scheduling state, or execution context.
+Ordinary Opcodes are user-defined, type-bound data transformation primitives that operate exclusively on node fields and immediate literals. They represent pure, side-effect-free computations whose semantics are fully determined by the static types of their operands and the target platform’s capabilities. Unlike structural or control-flow instructions, Ordinary Opcodes do not alter the AS tree topology, scheduling state, or execution context.
 
-Each Ordinary Opcode is declared within the `ops` block of a `.tsltype` file and invoked in TSL source code via an `InstDecl` of the form:
+Each Ordinary Opcode is declared within the `ops` block of a `.tsltype` file and invoked in Arxil source code via an `InstDecl` of the form:
 
 ```tsl
 OpCode OperTarg OperGoal;
@@ -594,14 +594,14 @@ where:
 - **OperTarg** (operation target) is a parenthesized list of field identifiers that receive the result(s) of the computation (the *write set*),
 - **OperGoal** (operation goal) is a parenthesized list of field identifiers and/or integer literals that provide input values (the *read set*).
 
-This read-write separation originates from the small-step operational semantics of the TS model: an instruction computes a deterministic value from its *OperGoal* and writes the outcome to its *OperTarg*. This model enables precise alias analysis, memory safety verification, and structured concurrency reasoning.
+This read-write separation originates from the small-step operational semantics of the AS model: an instruction computes a deterministic value from its *OperGoal* and writes the outcome to its *OperTarg*. This model enables precise alias analysis, memory safety verification, and structured concurrency reasoning.
 
 #### A.1.1 Mandatory Specification Requirements
 
 Every custom Ordinary Opcode **must** explicitly define the following in its `.tsltype` declaration:
 
 1. **Name**  
-   - Must be a valid TSL identifier (see §2.2).  
+   - Must be a valid Arxil identifier (see §2.2).  
    - Recommended naming convention: `TypeName.opName` (e.g., `Matrix4x4.inv`). The dot (`.`) is part of the name string and carries no syntactic meaning; it serves only as a human-readable logically namespace delimiter.
 
 2. **Operand Signature**  
@@ -621,7 +621,7 @@ Every custom Ordinary Opcode **must** explicitly define the following in its `.t
 3. **Target Implementations**  
    - For each supported backend, provide either:
      - A native assembly template (with placeholders like `${field}` or `${imm}`), or
-     - A TSLVM fallback expressed as a sequence of standard-library `instruct` statements.
+     - A ArxilVM fallback expressed as a sequence of standard-library `instruct` statements.
    - If an operation is atomic on a given platform, the corresponding native entry **must** be prefixed with `@atomic`.
 
 4. **Type Consistency Rule**  
@@ -673,13 +673,13 @@ Violations of this constraint render the opcode ineligible for use in interrupti
 
 ### A.2 Generic Opcodes
 
-Generic Opcodes are a set of reserved instructions in TSL that govern control flow, subroutine invocation, and interactions with the runtime scheduler (TSLVM or EDSOS). Unlike Ordinary Opcodes (which operate on field values) or Structural Opcodes (which manipulate tree topology), Generic Opcodes define *how execution proceeds* or *how a node communicates with the execution environment*.  
+Generic Opcodes are a set of reserved instructions in Arxil that govern control flow, subroutine invocation, and interactions with the runtime scheduler (ArxilVM or EDSOS). Unlike Ordinary Opcodes (which operate on field values) or Structural Opcodes (which manipulate tree topology), Generic Opcodes define *how execution proceeds* or *how a node communicates with the execution environment*.  
 
 All Generic Opcodes appear as standalone instructions within an `instruct` block.
 
-**Eight Generic Opcodes are exposed to TSL programs**, listed below.
+**Eight Generic Opcodes are exposed to Arxil programs**, listed below.
 
-> **Note**: The opcodes `wait`, `sgnl`, `yiel`, and `warn` do not perform computation directly. Instead, they serve as *system calls* to the underlying runtime (TSLVM/EDSOS), whose precise behavior may be platform-dependent but must conform to the abstract semantics defined here.
+> **Note**: The opcodes `wait`, `sgnl`, `yiel`, and `warn` do not perform computation directly. Instead, they serve as *system calls* to the underlying runtime (ArxilVM/EDSOS), whose precise behavior may be platform-dependent but must conform to the abstract semantics defined here.
 
 #### A.2.1 `exec` — Execute a Logical Contract
 
@@ -746,7 +746,7 @@ StepAction = InstructDecl | ExecDecl ;
 - Semantics
   - Before each iteration, the runtime checks `DoneFlag`. If `true`, the loop exits.
   - Otherwise, control transfers to `StepAction`, which must eventually cause `DoneFlag` to become `true`.
-  - This construct enforces structured, verifiable loops aligned with the TS model’s deterministic execution.
+  - This construct enforces structured, verifiable loops aligned with the AS model’s deterministic execution.
 
 - Example
 ```tsl
@@ -768,7 +768,7 @@ Options   = IDENT ;
 ```
 
 - Semantics
-  - This is a system call to the scheduler (TSLVM/EDSOS).
+  - This is a system call to the scheduler (ArxilVM/EDSOS).
   - The `WaitEvent` identifier *declare* an event name to wait somebody `sgnl` the same event name.
   - The optional `Options` identifier may specify synchronization policy as defined by the runtime.
   - While blocked, the node retains all field values, register values and program counter state.
@@ -799,7 +799,7 @@ Options  = IDENT ;
 - Semantics
   - Dual to `wait`; forms a synchronization pair.
   - The `WaitEvent` identifier must match the one used in a corresponding wait.
-  - If no node is waiting on that event name, `sgnl` will be in undefined behavior inside TSL, but the runtime (TSLVM or EDSOS) may give an precise definition.
+  - If no node is waiting on that event name, `sgnl` will be in undefined behavior inside Arxil, but the runtime (ArxilVM or EDSOS) may give an precise definition.
   - The exact signaling policy (e.g., FIFO, broadcast) is runtime-defined.
 
 - Example
@@ -843,7 +843,7 @@ FnshDecl = "fnsh", ";" ;
 ```
 
 - Semantics
-  - Corresponds to the `[Finish]` rule in the TS Formal Semantics.
+  - Corresponds to the `[Finish]` rule in the AS Formal Semantics.
   - The node is removed from the scheduler’s ready queue.
   - Children remain unaffected.
   - No instructions may follow `fnsh` in the same basic block.
@@ -869,7 +869,7 @@ NodeRef   = "this" | "all" | IDENT ;
 
 - Semantics
   - `this`: refers to the current node.
-  - `all`: refers to all nodes in the current task tree (TS).
+  - `all`: refers to all nodes in the current task tree (AS).
   - `IDENT`: refers to a direct child node (i.e., pushed by this node); names are resolved in the local namespace only.
   - Affected nodes transition to `error` and are typically excluded from further scheduling.
   - Intended for unrecoverable or policy-violating conditions.
@@ -902,7 +902,7 @@ warn (worker1, worker2, this);
 
 ### A.3 Structural Opcodes
 
-Structural Opcodes are a class of instructions in the Tree-Stacked Language (TSL) that directly manipulate the hierarchical structure of the computation tree as defined by the TS Computational Model. These opcodes correspond to atomic structural transformations formally specified in the *TS Formal Semantics and Verification* document. Unlike data-manipulating or control-flow instructions, Structural Opcodes alter node relationships, ownership, and binding topologies. Their execution is governed by separation logic rules that ensure memory safety, binding consistency, and structural integrity.
+Structural Opcodes are a class of instructions in the Tree-Stacked Language (Arxil) that directly manipulate the hierarchical structure of the computation tree as defined by the AS Computational Model. These opcodes correspond to atomic structural transformations formally specified in the *AS Formal Semantics and Verification* document. Unlike data-manipulating or control-flow instructions, Structural Opcodes alter node relationships, ownership, and binding topologies. Their execution is governed by separation logic rules that ensure memory safety, binding consistency, and structural integrity.
 
 Each Structural Opcode must appear within an `instruct` block and operates relative to the lexical and runtime context of the enclosing node. All identifiers referenced in operand lists must be resolvable within the current node’s scope at compile time.
 
@@ -948,7 +948,7 @@ SonCodeFn      = IDENT ;
   - `NodeTemplate` refers to a previously declared `node` template (e.g., `node Worker { ... }`).
   - Each binding pair `(A => B)` asserts that field/function `A` in the current node (which must be `publ` or `ance`) satisfies the binding contract of `B` in the child (which must be declared as `ance`).
   - `priv`-declared entities cannot appear on the left-hand side of any binding.
-  - This instruction corresponds to the **Push(n, N\*, D\*, I\*)** rule in the TS formal semantics.
+  - This instruction corresponds to the **Push(n, N\*, D\*, I\*)** rule in the AS formal semantics.
 
 ---
 
@@ -1022,7 +1022,7 @@ Options  = STRING ;  // Layout directives (e.g., "{ insert_after: 'buf' }")
 - Semantics
   - `NodeName` identifies the child node to be merged, which must be a direct descendant.
   - The merge performs a **structural concatenation** of the child’s `publ` data segment and function bindings into the parent’s layout.
-  - The `Options` string provides hints for memory layout reorganization (e.g., insertion points), interpreted by the TSLVM or lowering backend.
+  - The `Options` string provides hints for memory layout reorganization (e.g., insertion points), interpreted by the ArxilVM or lowering backend.
   - After merging, the child node itself will be *not exist*, and its resources become part of the current node.
   - This corresponds to the **Merge(n, n\*)** rule.
 

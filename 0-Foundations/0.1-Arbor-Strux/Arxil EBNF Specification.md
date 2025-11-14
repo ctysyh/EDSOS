@@ -1,8 +1,8 @@
-# TSL EBNF Specification
+# Arxil EBNF Specification
 
 ---
 
-- [TSL EBNF Specification](#tsl-ebnf-specification)
+- [Arxil EBNF Specification](#arxil-ebnf-specification)
   - [Top-Level Structure](#top-level-structure)
   - [.tsltype](#tsltype)
   - [Node Declaration](#node-declaration)
@@ -27,13 +27,13 @@
 ## Top-Level Structure
 
 ```ebnf
-TSLProgram = { .tsltype }, { .tsllib }, { NodeDecl } ;
+ArxilProgram = { .tsltype }, { .tsllib }, { NodeDecl } ;
 ```
 
 ## .tsltype
 
 ```ebnf
-TSLTypeFile = TypeDecl ;
+ArxilTypeFile = TypeDecl ;
 
 TypeDecl = "type", IDENT, "{",
              TypeName,
@@ -71,7 +71,7 @@ OpDecl = IDENT, "{",
            [OpPointerArith],
            [OpUnary],
            [OpMayTrap],
-           [OpLoweredTSL],
+           [OpLoweredArxil],
          "}" ;
 
 OpNative      = "native", "=", BOOLEAN, ";" ;
@@ -91,7 +91,7 @@ OpLibcall = "libcall", "=", STRING, ";" ;
 
 OpIntrinsic = "intrinsic", "=", BOOLEAN, ";" ;
 
-OpLoweredTSL = "lowered", "=", InstScriBlock, ";" ;
+OpLoweredArxil = "lowered", "=", InstScriBlock, ";" ;
 
 InstScriBlock = "'inst_scri'", "{", { InstLine }, "}" ;
 
@@ -240,7 +240,7 @@ LangTag = "inst_scri" | "c" | "cpp" | "rust" | IDENT ;
 LangCode = { ANY_CHAR_EXCEPT_CURLY_BRACE_NESTED } ;
 ```
 
-> *The content of LangCode must be lowered by a registered frontend plugin into a sequence of TSL instructions before being executed by TSLVM or EDSOS that only reference symbols declared in the enclosing function’s parameter and return lists. Which has been lowered gets the tag "@lowered" to notify.*
+> *The content of LangCode must be lowered by a registered frontend plugin into a sequence of Arxil instructions before being executed by ArxilVM or EDSOS that only reference symbols declared in the enclosing function’s parameter and return lists. Which has been lowered gets the tag "@lowered" to notify.*
 
 ## Lexical Elements
 
