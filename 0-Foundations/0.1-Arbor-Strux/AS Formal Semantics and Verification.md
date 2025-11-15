@@ -1,7 +1,7 @@
 # AS Formal Semantics and Verification
 
 > Formal Semantics of Arbor Strux: A Causal Arbor Network Model
-> v0.2.0
+> v0.2.1
 
 ## 1. Introduction
 
@@ -146,8 +146,7 @@ Each event modifies finitely many local states.
 The **happens-before** relation $\prec$ is the smallest partial order satisfying:
 1. **Program order**: If $e_1, e_2$ act on the same node $n$, and $e_1$ precedes $e_2$ in $\mathcal{I}(n)$, then $e_1 \prec e_2$.
 2. **Creation dependency**: If $e_1 = \mathtt{push}(n, c)$ and $e_2$ acts on $c$, then $e_1 \prec e_2$.
-3. **Data dependency**: If $e_1$ writes a field $f$, and $e_2$ reads a field that resolves (via binding) to $f$, then $e_1 \prec e_2$.
-4. **Transitivity**: $\prec$ is closed under transitive composition.
+3. **Transitivity**: $\prec$ is closed under transitive composition.
 
 ### 7.3 Execution Semantics  
 System evolution proceeds via event application:
@@ -157,6 +156,32 @@ System evolution proceeds via event application:
 - All operations preserve (WF1)–(WF4).
 
 > There is **no global clock**; time is entirely defined by $\prec$.
+
+### 7.4 Transient Zombie Axiom and State Dynamics
+
+We introduce a liveness-oriented axiom that characterizes the temporal behavior of non-active execution states in well-formed configurations. This axiom captures an essential property of *well-behaved* Arbor Strux programs: temporary suspension does not imply indefinite stalling.
+
+> **Axiom 7.4.1 (Transient Zombie Axiom).**  
+> Let $\Sigma$ be a well-formed global configuration, and let $n \in \mathrm{dom}(\Sigma)$ such that  
+> $\mathcal{E}(n) \in \{ \mathtt{ready},\ \mathtt{blocked} \}$.  
+> Then there exists a finite causal sequence of events $e_1, \dots, e_k$ applicable to $\Sigma$—each preserving well-formedness—such that the resulting configuration $\Sigma'$ satisfies  
+> $\mathcal{E}'(n) \in \{ \mathtt{running},\ \mathtt{zombie},\ \mathtt{error} \}$.
+
+Intuitively, nodes in $\mathtt{ready}$ or $\mathtt{blocked}$ states are *temporarily inert*: they do not generate events themselves, but their state is guaranteed to evolve within a finite causal future, either by resuming computation ($\mathtt{running}$) or by being finalized ($\mathtt{zombie}$ or $\mathtt{error}$). We refer to such states as **transient zombie states**, emphasizing their provisional nature despite superficial quiescence.
+
+This axiom  constitutes a *program-level liveness condition*. Configurations violating Axiom 7.4.1 correspond to pathological executions, which, while syntactically admissible under (WF1)–(WF4), exhibit undesirable non-termination at the node level.
+
+#### Classification of Execution States
+
+Under Axiom 7.4.1, the set $\mathsf{ExecStatus}$ admits a natural dynamical partition:
+
+- **Active state**: $\mathtt{running}$ — the only state from which local events originate. Its termination is *program-determined*; the model imposes no intrinsic bound on its duration.
+- **Transient (metastable) states**: $\mathtt{ready},\ \mathtt{blocked}$ — causally inert but guaranteed to exit within finite steps under the axiom.
+- **Terminal (absorbing) states**: $\mathtt{zombie},\ \mathtt{error}$ — once entered, no further events involving $n$ are possible; these states are closed under all event applications.
+
+Notably, the exit condition for $\mathtt{running}$ is *not* enforced by the model’s transition rules; it depends entirely on the instruction sequence $\mathcal{I}(n)$ (e.g., presence of $\mathtt{finish}$ or loop termination). In contrast, the eventual exit of transient states is *externally guaranteed* by Axiom 7.4.1, contingent on the global causal context (e.g., resolution of ancestor bindings, subtree completion, or structural reconfiguration via $\mathtt{lift}$).
+
+This distinction underscores a fundamental asymmetry in AS dynamics: **activity is local and autonomous, while suspension is global and contextual**.
 
 ---
 
@@ -202,6 +227,148 @@ AS can simulate any Turing machine by:
 > whose spatial structure is a tree,  
 > and whose temporal order is partial and observer-dependent.**
 
---- 
+---
+
+翻译成中文：
+
+## 11. Read and Write Permission Light Cone
+
+### 11.1 Motivation and Intuition
+
+In the causal arbor network of Arbor Strux, field binding chains define paths of data dependency from descendant nodes to their physical sources in ancestors. While this structure enables zero-copy sharing and analyzable reference paths, it provides no built-in mechanism to prevent race conditions when multiple descendants concurrently write to the same public field.
+
+To reconcile structural freedom with data-race safety, we introduce **field-level read/write permissions** and model their semantics through a geometric metaphor: the **permission light cone**.
+
+> **Intuition**:  
+> Imagine embedding the AS tree into a 2D Euclidean plane:
+> - The **x-axis** represents depth in the tree (root at $x=0$, children at increasing $x$).
+> - The **y-axis** linearly orders field names within each node’s public namespace.
+>
+> A binding chain from a descendant $n$ to its resolved source $(m, f)$ becomes a polyline in the $(x,y)$-plane, ending at $(x_m, y_f)$. All such chains resolving to the same $(m,f)$ form a **cone** emanating backward from the source.
+>
+> Now assign to each node along a chain a **filter**—a permission lens:
+> - `READ` → transparent filter (light passes through, no modification);
+> - `WRITE` → reflective filter (light bounces back, modifying the source);
+> - Mixed or inconsistent filters cause optical interference—i.e., data races.
+>
+> The entire structure becomes a **3D permission light cone**, where a third axis $z$ indexes distinct binding chains converging on the same source. This cone not only visualizes dependencies but also encodes concurrency constraints.
+
+This section formalizes this intuition while preserving its explanatory power.
+
+### 11.2 Extended Semantic Domains
+
+We extend the basic domains of Section 2 as follows:
+
+- **Privilege types**:
+  $$
+  \mathsf{Priv} ::= \mathtt{READ} \mid \mathtt{WRITE}
+  $$
+
+- **Field declaration with privilege**:
+  Each public field in $\mathcal{D}_{\text{publ}}(n)$ is now annotated:
+  $$
+  \mathcal{D}_{\text{publ}}(n) : \mathcal{F}_{\text{publ}} \rightharpoonup \mathcal{V} \times \mathsf{Priv}
+  $$
+  The privilege indicates the *default export mode* of the field.
+
+- **Ancestor binding with declared intent**:
+  Binding references are enriched with access intent:
+  $$
+  \texttt{BindingRef} ::= \texttt{Unbound} \mid \texttt{Bound}(m, f', p)
+  $$
+  where $p \in \mathsf{Priv}$ is the privilege *requested by the descendant*.
+
+- **Node-local access registry**:
+  Each node $n$ maintains a dynamic map of active accesses:
+  $$
+  \mathcal{A}\!\mathcal{C}\!\mathcal{C}(n) \subseteq \mathcal{N} \times \mathcal{F}_{\text{publ}} \times \mathsf{Priv}
+  $$
+  recording which child (or self) currently holds which privilege on which field.
+
+### 11.3 Permission Consistency Constraints
+
+We impose new well-formedness conditions on configurations.
+
+> **(WF5) Source Privilege Compatibility**  
+> For any node $n$, field $f \in \mathrm{dom}(\mathcal{D}_{\text{publ}}(n))$, and any descendant $d$ such that  
+> $\texttt{Resolve}(d, f') = (n, f)$ with declared privilege $p_d$,  
+> it must hold that:
+> - If $p_d = \mathtt{WRITE}$, then the source field’s declared privilege includes $\mathtt{WRITE}$;
+> - If $p_d = \mathtt{READ}$, then the source field’s declared privilege includes $\mathtt{READ}$.
+
+> **(WF6) Concurrent Access Exclusivity**  
+> For any node $n$, field $f$, and any two distinct active accesses  
+> $(c_1, f, p_1), (c_2, f, p_2) \in \mathcal{A}\!\mathcal{C}\!\mathcal{C}(n)$,  
+> it must not be the case that $p_1 = \mathtt{WRITE}$ and $p_2 \in \{\mathtt{READ}, \mathtt{WRITE}\}$.
+
+These rules enforce that **at most one writer may access a field at any time**, and readers are blocked during writes—mirroring mutual exclusion.
+
+### 11.4 Geometric Interpretation: The Light Cone Model
+
+We now formalize the geometric intuition.
+
+#### Definition 11.1 (Depth Embedding)
+For each node $n$, define its depth:
+$$
+\delta(n) = 
+\begin{cases}
+0 & \text{if } \mathcal{A}(n) = [] \\
+1 + \delta(p_1) & \text{if } \mathcal{A}(n) = [p_1, \dots]
+\end{cases}
+$$
+This gives the $x$-coordinate: $x_n := \delta(n)$.
+
+#### Definition 11.2 (Field Embedding)
+Fix an injective encoding $\phi : \mathcal{F} \to \mathbb{R}$. For field $f$, set $y_f := \phi(f)$.
+
+#### Definition 11.3 (Binding Ray)
+A binding chain from $d$ to source $(s, f)$ induces a discrete ray:
+$$
+\mathcal{R}(d \leadsto s,f) = \big\{ (x_n, y_f) \mid n \in \text{path}(d \to s) \big\}
+$$
+where $\text{path}(d \to s)$ is the unique ancestor chain from $d$ up to $s$.
+
+#### Definition 11.4 (Permission Light Cone)
+For a fixed source $(s, f)$, let $\mathcal{C}(s,f)$ be the set of all descendants $d$ such that $\texttt{Resolve}(d, \cdot) = (s,f)$. Index them as $\{d_1, d_2, \dots, d_k\}$. The **permission light cone** is the set:
+$$
+\mathcal{L}(s,f) = \bigcup_{i=1}^k \Big( \mathcal{R}(d_i \leadsto s,f) \times \{i\} \Big) \subseteq \mathbb{R}^3
+$$
+with coordinates $(x, y, z)$. Each ray carries a **permission profile**:
+$$
+\Pi_i = \big[ p_{n}^{(i)} \big]_{n \in \text{path}(d_i \to s)}
+$$
+where $p_n^{(i)}$ is the privilege declared by $d_i$ at node $n$ (typically constant along the ray).
+
+> **Optical Semantics**:
+> - A ray with all $p = \mathtt{READ}$ is a **transmissive beam**—it observes but does not perturb.
+> - A ray containing $p = \mathtt{WRITE}$ is a **reflective beam**—it modifies the apex $(x_s, y_f, \cdot)$, potentially affecting other rays.
+> - Two reflective rays in the same cone with overlapping $x$-projections and no causal order constitute a **race interference pattern**.
+
+### 11.5 Dynamic Evolution and Causal Enforcement
+
+When a node $d$ attempts to execute an instruction that accesses a bound field $f$:
+
+1. The runtime computes $\texttt{Resolve}(d, f) = (s, f_s)$;
+2. It checks whether the requested privilege $p$ is compatible with $\mathcal{D}_{\text{publ}}(s)(f_s)$ (WF5);
+3. It queries $\mathcal{A}\!\mathcal{C}\!\mathcal{C}(s)$:
+   - If $p = \mathtt{READ}$ and no writer is active → grant access;
+   - If $p = \mathtt{WRITE}$ and no other access is active → grant exclusive access;
+   - Otherwise → block the node ($\mathcal{E}(d) := \mathtt{blocked}$) until conflicting accesses complete.
+
+Upon completion, the access is removed from $\mathcal{A}\!\mathcal{C}\!\mathcal{C}(s)$, and waiting nodes are re-evaluated.
+
+This mechanism ensures that **the light cone remains optically coherent**: no two conflicting beams illuminate the apex simultaneously.
+
+### 11.6 Static Analysis via Cone Inspection
+
+The light cone model enables powerful compile-time checks:
+
+- **Race Detection**: Scan $\mathcal{L}(s,f)$ for multiple $\mathtt{WRITE}$ rays whose $x$-intervals overlap and lack a happens-before edge. Flag as potential race.
+- **Over-Serialization**: Detect cones where all rays are $\mathtt{WRITE}$ despite operating on disjoint $y$-regions (different fields)—suggest privilege refinement.
+- **Dead Binding**: Identify rays that terminate at unlit apices (fields never written)—optimize away.
+
+Visualization tools can render $\mathcal{L}(s,f)$ as interactive 3D cones, with color-coded rays (green = READ, red = WRITE), allowing developers to “see” concurrency structure.
+
+---
 
 *End of Formal Semantics Document.*
