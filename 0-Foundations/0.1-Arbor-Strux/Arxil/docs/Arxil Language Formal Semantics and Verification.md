@@ -1,6 +1,6 @@
-# TSL Language Formal Semantics and Verification
+# Arxil Language Formal Semantics and Verification
 
-> TSL 语言形式语义与验证
+> Arxil 语言形式语义与验证
 
 ---
 
@@ -224,7 +224,7 @@ $$
 
 ### 运行时行为
 
-- **无类型信息保留**：生成的 TSLVM 字节码或 native code 不包含类型元数据；
-- **错误处理**：类型错误在编译期报错；运行时越界/UB 由 EDSOS/TSLVM 的边界机制捕获（非语言责任）。
+- **无类型信息保留**：生成的 ArxilVM 字节码或 native code 不包含类型元数据；
+- **错误处理**：类型错误在编译期报错；运行时越界/UB 由 EDSOS/ArxilVM 的边界机制捕获（非语言责任）。
 
 ---

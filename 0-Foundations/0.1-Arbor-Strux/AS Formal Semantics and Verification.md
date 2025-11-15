@@ -1,322 +1,207 @@
 # AS Formal Semantics and Verification
 
-> AS 形式语义与验证基础
+> Formal Semantics of Arbor Strux: A Causal Arbor Network Model
+> v0.2.0
 
-## 基础设定
+## 1. Introduction
 
-### 前提约定
+Arbor Strux (AS) is a distributed, concurrent computational model grounded in *local state machines* whose interactions are mediated through *structural composition* and *field binding*. Unlike traditional global-state transition systems, AS does not assume a synchronized global clock. Instead, it embraces an asynchronous, event-driven paradigm where time emerges as a *causal partial order* over local actions, and space is defined by a dynamically evolving tree topology.
 
-我们采用 **separation logic** 的标准记法：
+This document presents a rigorous formal semantics for AS, reframing it as a **Causal Arbor Network**—a system in which:
+- **Space** is encoded by the tree structure (via ancestor and child relations),
+- **Time** is captured by a happens-before causal relation over events,
+- **Parallelism** arises from causally independent local evolutions,
+- **Observation** is relative to each node’s causal past.
 
-- `P ∗ Q`：堆空间可分割为满足 `P` 和 `Q` 的两部分；
-- `emp`：空堆；
-- `↦`：点对点映射（如 `n ↦ (N, S, A, C, D, I, op)` 表示节点 `n` 的完整七元组内容）；
-- `tree(n)`：表示以 `n` 为根的良构 AS 子树（递归谓词）；
-- 所有操作均为 in-place 修改；
-- 节点标识符 `n` 视为地址，可作为 heap location 使用；
-- 假设存在一个全局 capability 环境 Γ，但此处暂不显式建模，仅关注结构与状态。
-
-首先定义核心堆谓词：
-
-```text
-node(n, N, S, A, C, D, I, op) ≜ n ↦ (N, S, A, C, D, I, op)
-
-tree(n) ≜ 
-  ∃N,S,A,D,I,C,op. 
-  A = A_prefix ∗ 
-  node(n,N,S,A,C,D,I) ∗ 
-    match C with
-    | ∅ ⇒ emp
-    | {c₁,…,cₖ} ⇒ 
-        tree(c₁, [n] ++ A) ∗ … ∗ tree(cₖ, [n] ++ A)
-```
-
-| 分量 | 类型 | 精确定义 |
-|------|------|--------|
-| $\mathcal{N}$ | 标识符 | 全局唯一 |
-| $\mathcal{S}$ | 状态 | ∈ {ready, running, blocked, zombie, error} |
-| $\mathcal{A}$ | **有限序列** | 祖先链：$\mathcal{A} = [p_1, p_2, \dots, p_k]$，其中 $p_1$ 是直接父节点，$p_k$ 是根节点。满足栈序。 |
-| $\mathcal{C}$ | **有限有根树**（rooted tree）或 **空** | 表示以 $n$ 为根的**整个后代子树**。若 $\mathcal{C} = \emptyset$，表示无子节点；否则 $\mathcal{C}$ 是一个递归树结构，其根节点集合即为 $n$ 的直接子节点，每个子节点自身也携带其 $\mathcal{C}'$。 |
-| $\mathcal{D}$ | 映射 | 字段环境 |
-| $\mathcal{I}$ | 指令序列 | 控制流，$\mathcal{I} = \mathtt{instruct} = [i_1, \dots, i_m]$ |
-| $\mathtt{pc}$ | 自然数 | Program Counter，表示当前正在执行 i_pc |
-
-> - $\mathcal{C}$ **不是集合**，而是**子树**（subtree）。
-> - 这意味着 $\mathcal{C}$ 本身是一个**递归数据结构**，可形式化为：
-> - $\mathcal{C} ::= \emptyset \mid \{ n_1, n_2, \dots, n_m \} \quad \text{where each } n_i \text{ is a Node with its own } n_i.\mathcal{C}$
-> - 因此，整个 AS 结构 $\mathcal{T}$ 就是**单个根节点及其 $\mathcal{C}$**。
+The model guarantees structural well-formedness, termination of field resolution, and Turing completeness, while enabling zero-copy data sharing with explicit, analyzable dependencies.
 
 ---
 
-### 良构性条件
+## 2. Basic Domains
 
-1. **祖先一致性（Ancestor Consistency）**  
-   $ \forall n, \forall c \in \mathcal{C}^n: \mathcal{A}^c = [n] \mathbin{+\!+} \mathcal{A}^n $
+We fix the following syntactic and semantic domains:
 
-2. **父子互反性（Parent-Child Reciprocity）**  
-   $ \forall n, \forall c \in \mathcal{C}^n: n \in \mathcal{A}^c[0] \land n = \text{parent}(c) $
-
-3. **无环性（Acyclicity）**  
-   $ \neg \exists n_0, ..., n_k. n_0 = n_k \land \forall i < k, n_{i+1} \in \mathcal{C}^{n_i} $
-
-4. **唯一父性（Unique Parent）**  
-   $ \forall n, |\{ p \mid n \in \mathcal{C}^p \}| \leq 1 $
-
----
-
-## AS 模型的形式化
-
-### 操作的形式化（Separation Logic Style）
-
-#### 1. Push(n, n\*)
-
-> 在节点 `n` 下创建新子节点 `n*`。
-
-**Rule**:
-```text
-{ node(n, N, S, A, C, D, I, op) ∗ n* ↦ _ }
-Push(n, n*)
-{ node(n, N, S, A, C ∪ {n*}, D, I, op) ∗ 
-  node(n*, N*, ready, [n] ++ A, ∅, D*, I*, op) }
-```
-
-> 其中 `N*`, `D*`, `I*` 为输入参数。
+- **Node identifiers**: $\mathcal{N}$ — a countable set of globally unique names.
+- **Execution states**:  
+  $\mathsf{ExecStatus} = \{ \mathtt{ready},\ \mathtt{running},\ \mathtt{blocked},\ \mathtt{zombie},\ \mathtt{error} \}$.
+- **Instructions**: $\mathsf{Instr}$ — a set of atomic operations including  
+  $\mathtt{push}$, $\mathtt{lift}$, $\mathtt{exec}$, $\mathtt{cond}$, $\mathtt{cycl}$, $\mathtt{finish}$, etc.
+- **Field names**: $\mathcal{F} = \mathcal{F}_{\text{priv}} \uplus \mathcal{F}_{\text{publ}} \uplus \mathcal{F}_{\text{ance}}$.
+- **Values**: $\mathcal{V}$ — a domain of base values (integers, booleans, etc.).
+- **Binding references**:  
+  $\texttt{BindingRef} ::= \texttt{Unbound} \mid \texttt{Bound}(m, f')$,  
+  where $m \in \mathcal{N}$ and $f' \in \mathcal{F}_{\text{publ}}$.
 
 ---
 
-#### 2. Pop(n, n\*)
+## 3. Local Node State (Spatial Coordinates + Computational Context)
 
-> 删除 `n* ∈ DirectChildren(n)` 及其整个子树。
-
-**Rule**:
-```text
-{ 
-  ∃C'. 
-    node(n, N, S, A, C' ∪ {n*}, D, I, op) ∗ 
-    tree(n*) ∗ 
-    trees(C')
-}
-Pop(n, n*)
-{ node(n, N, S, A, C', D, I, op) ∗ trees(C') }
-```
-
-> 其中 trees(C') ≜ ∗_{c ∈ C'} tree(c)。
-
----
-
-#### 3. Lift(n)
-
-> 将 `n` 从父 `q = n.A[0]` 移至祖父 `p = n.A[1]`，并将 `q` 降为 `n` 的子节点。
-
-**Rule**：
-```text
-{ 
-  node(p, Nₚ, Sₚ, Aₚ, Cₚ, Dₚ, Iₚ, opₚ) ∗
-  node(q, N_q, S_q, [p] ++ Aₚ, C_q, D_q, I_q, op_q) ∗
-  node(n, Nₙ, Sₙ, [q, p] ++ Aₚ, Cₙ, Dₙ, Iₙ) ∗
-  (tree(c₁) ∗ … ∗ tree(cₖ))      -- C_q = {n, c₁,…,cₖ}
-  (tree(d₁) ∗ … ∗ tree(dₘ))      -- Cₙ = {d₁,…,dₘ}
-}
-Lift(n)
-{
-  node(p, Nₚ, Sₚ, Aₚ, (Cₚ \ {q}) ∪ {n}, Dₚ, Iₚ, opₚ) ∗
-  node(n, Nₙ, Sₙ, [p] ++ Aₚ, Cₙ ∪ {q}, Dₙ, Iₙ, opₙ) ∗
-  node(q, N_q, S_q, [n, p] ++ Aₚ, {c₁,…,cₖ}, D_q, I_q, op_q) ∗
-  (tree(c₁) ∗ … ∗ tree(cₖ)) ∗
-  (tree(d₁) ∗ … ∗ tree(dₘ))
-}
-```
-
-> 其中 `trees(S) ≜ ∗_{x∈S} tree(x)`
-
----
-
-#### 4. Merge(n, n\*)
-
-> 合并 `n*` 到 `n`，提升其子节点。
-
-**Rule**:
-```text
-{
-  node(n, N, S, A, C, D, I, op) ∗
-  node(n*, N*, S*, [n]++A, C*, D*, I*, op*) ∗
-  trees(C*) ∧ n* ∈ C
-}
-Merge(n, n*)
-{
-  node(n, N, S, A, (C \ {n*}) ∪ C*, D ⊕ D*, I ⊕ I*, op ⊕ op*) ∗
-  (∗_{c ∈ C*} tree(c, [n] ++ A))
-}
-```
-
-> `⊕` 为 `Merge` 策略，内生保证节点内的正确性。
-
----
-
-#### 5. Detach(n, F_D, F_I)
-
-> 从 `n` 分离出新子节点 `n*`，携带 `F_D ⊆ D`, `F_I ⊆ I`。
-
-**Rule**:
-```text
-{ node(n, N, S, A, C, D, I, op) ∗ n* ↦ _ }
-Detach(n, F_D, F_I)
-{ 
-  node(n, N, S, A, C ∪ {n*}, D \ F_D, I \ F_I, op) ∗
-  node(n*, N*, ready, [n]++A, ∅, F_D, F_I, op*)
-}
-```
-
-> 这里 `op` “原样”指示下一条指令，并可以因此达到上界。
-
----
-
-#### 6. Active(n)
-
-**Rule**:
-```text
-{ node(n, N, S, A, C, D, I, op) ∧ S ≠ running }
-Active(n)
-{ node(n, N, ready, A, C, D, I, op) }
-```
-
----
-
-#### 7. Wait(n)
-
-**Rule**:
-```text
-{ node(n, N, running, A, C, D, I, op) }
-Wait(n)
-{ node(n, N, blocked, A, C, D, I, op) }
-```
-
----
-
-#### 8. Yield(n)
-
-**Rule**:
-```text
-{ node(n, N, running, A, C, D, I, op) }
-Yield(n)
-{ node(n, N, ready, A, C, D, I, op) }
-```
-
----
-
-#### 9. Finish(n)
-
-**Rule**:
-```text
-{ node(n, N, S, A, C, D, I, op) }
-Finish(n)
-{ node(n, N, zombie, A, C, D, I, op) }
-```
-
----
-
-#### 10. Warn(n)
-
-**Rule**:
-```text
-{ node(n, N, S, A, C, D, I, op) }
-Warn(n)
-{ node(n, N, error, A, C, D, I, op) }
-```
-
----
-
-### 执行的形式化
-
-#### 11. `exec label env`
-
-> 跳转至同节点内标签 `label` 对应的代码块（视为子过程）
+Each node $n \in \mathcal{N}$ maintains a **local state** $\sigma(n)$, defined as a 6-tuple:
 
 $$
-\frac{
-\text{code}(label) \Downarrow_{\text{inner}} (\Delta\mathcal{D}, \Delta H)
-}{
-\langle \texttt{exec label}, n, H \rangle \Downarrow \langle n[\mathcal{D} \mapsto \mathcal{D} \oplus \Delta\mathcal{D}], H \oplus \Delta H \rangle
-}
+\sigma(n) = \big(
+  \mathcal{E}(n),\ 
+  \mathcal{A}(n),\ 
+  \mathcal{C}(n),\ 
+  \mathcal{D}(n),\ 
+  \mathcal{I}(n),\ 
+  \mathtt{pc}(n)
+\big)
+$$
+
+| Component | Type | Semantics |
+|----------|------|-----------|
+| $\mathcal{E}(n)$ | $\in \mathsf{ExecStatus}$ | Execution status (control label) |
+| $\mathcal{A}(n)$ | $\in \mathcal{N}^*$ | **Spatial coordinate**: ancestor chain $[p_1, \dots, p_k]$, where $p_1$ is the direct parent and $p_k$ is the root |
+| $\mathcal{C}(n)$ | $\subseteq \mathcal{N}$ | **Spatial coordinate**: set of direct children |
+| $\mathcal{D}(n)$ | $(\mathcal{D}_{\text{priv}}, \mathcal{D}_{\text{publ}}, \mathcal{D}_{\text{ance}})$ | Field environment |
+| $\mathcal{I}(n)$ | $\in \mathsf{Instr}^*$ | Instruction sequence (program body) |
+| $\mathtt{pc}(n)$ | $\in \mathbb{N}^+$ | Program counter (1-based index into $\mathcal{I}(n)$) |
+
+> **Note**: $\mathcal{A}(n)$ and $\mathcal{C}(n)$ define the node’s position in the **tree space**; they are purely spatial and carry no temporal meaning.
+
+---
+
+## 4. Global Configuration (No Global Time)
+
+A **global configuration** is a partial function:
+$$
+\Sigma : \mathcal{N} \rightharpoonup \text{NodeState}
+$$
+with domain $\mathrm{dom}(\Sigma) \subseteq \mathcal{N}$ denoting the set of currently alive nodes.
+
+> **Crucially**, $\Sigma$ does not represent “the state at time $t$”, but rather a **causally consistent snapshot**—a set of local states that could coexist in some execution history.
+
+---
+
+## 5. Well-Formedness Constraints (Structural Invariants)
+
+A configuration $\Sigma$ is **well-formed** iff the following conditions hold:
+
+### (WF1) Ancestor Consistency  
+For all $n \in \mathrm{dom}(\Sigma)$, if $\mathcal{A}(n) = [p_1, \dots, p_k]$, then:
+- $p_i \in \mathrm{dom}(\Sigma)$ for all $i$,
+- $\mathcal{A}(p_1) = [p_2, \dots, p_k]$,
+- If $\mathcal{A}(n) = []$, then $n$ is the unique root.
+
+### (WF2) Child Closure  
+For all $n \in \mathrm{dom}(\Sigma)$ and $c \in \mathcal{C}(n)$:
+- $c \in \mathrm{dom}(\Sigma)$,
+- $\mathcal{A}(c) = [n] + \mathcal{A}(n)$.
+
+### (WF3) Unique Parent & Acyclicity  
+- Every non-root node has exactly one parent,
+- There is no cycle in the parent-child relation.
+
+> (WF1)–(WF3) together imply that $(\mathrm{dom}(\Sigma), E)$ forms a rooted tree, where $E = \{ (p, c) \mid c \in \mathcal{C}(p) \}$.
+
+### (WF4) Binding Graph DAG Property  
+Define the binding edge set:
+$$
+\mathcal{E}^{\text{bind}} = \{ (n, m) \mid \exists f \in \mathcal{F}_{\text{ance}},\ \mathcal{D}_{\text{ance}}(n)(f) = \texttt{Bound}(m, f') \}
+$$
+Then the graph $(\mathrm{dom}(\Sigma), \mathcal{E}^{\text{bind}})$ must be a directed acyclic graph (DAG).
+
+---
+
+## 6. Field Resolution and State Function
+
+### Definition 6.1 (Resolve)  
+For any $n \in \mathrm{dom}(\Sigma)$ and field name $f$:
+$$
+\texttt{Resolve}(n, f) =
+\begin{cases}
+(n, f) & \text{if } f \in \mathrm{dom}(\mathcal{D}_{\text{priv}}(n)) \cup \mathrm{dom}(\mathcal{D}_{\text{publ}}(n)) \\
+\bot & \text{if } f \in \mathrm{dom}(\mathcal{D}_{\text{ance}}(n)) \land \mathcal{D}_{\text{ance}}(n)(f) = \texttt{Unbound} \\
+\texttt{Resolve}(m, f') & \text{if } \mathcal{D}_{\text{ance}}(n)(f) = \texttt{Bound}(m, f')
+\end{cases}
+$$
+By (WF4), this recursion terminates.
+
+### Definition 6.2 (State Function)  
+The resolved value of field $f$ at node $n$ is:
+$$
+S(n, f) =
+\begin{cases}
+\mathcal{D}_{\text{priv}}(n)(f) & \text{if } f \in \mathrm{dom}(\mathcal{D}_{\text{priv}}(n)) \\
+\mathcal{D}_{\text{publ}}(n)(f) & \text{if } f \in \mathrm{dom}(\mathcal{D}_{\text{publ}}(n)) \\
+\mathcal{D}_{\text{publ}}(m)(f') & \text{if } \texttt{Resolve}(n, f) = (m, f') \\
+\texttt{Unbound} & \text{otherwise}
+\end{cases}
 $$
 
 ---
 
-#### 12. `cond f (t_act, f_act)`
+## 7. Events and Causal Evolution (Temporal Dimension)
 
-> 若字段 $f$ 为真，则执行 $t\_act$（如 `exe T`），否则执行 $f\_act$。
+### 7.1 Events  
+An **event** is the application of an black box operation, e.g.:
+- $\mathtt{exec}(n)$: execute current instruction of $n$,
+- $\mathtt{push}(n, c)$: $n$ creates child $c$,
+- $\mathtt{lift}(n, c)$: restructure subtree rooted at $c$ around $n$.
 
-$$
-\frac{
-f \in \mathcal{D}^n \lor (\exists a \in \mathcal{A}^n.\, f \in \mathcal{D}^a) \\
-v = \text{read}(f) \\
-\langle act, n, H \rangle \Downarrow \langle n', H' \rangle \quad \text{where } act = 
-    \begin{cases}
-    t\_act & \text{if } v \neq 0 \\
-    f\_act & \text{otherwise}
-    \end{cases}
-}{
-\langle \texttt{cond } f\ (t\_act, f\_act), n, H \rangle \Downarrow \langle n', H' \rangle
-}
-$$
+Each event modifies finitely many local states.
 
----
+### 7.2 Causal Partial Order ($\prec$)  
+The **happens-before** relation $\prec$ is the smallest partial order satisfying:
+1. **Program order**: If $e_1, e_2$ act on the same node $n$, and $e_1$ precedes $e_2$ in $\mathcal{I}(n)$, then $e_1 \prec e_2$.
+2. **Creation dependency**: If $e_1 = \mathtt{push}(n, c)$ and $e_2$ acts on $c$, then $e_1 \prec e_2$.
+3. **Data dependency**: If $e_1$ writes a field $f$, and $e_2$ reads a field that resolves (via binding) to $f$, then $e_1 \prec e_2$.
+4. **Transitivity**: $\prec$ is closed under transitive composition.
 
-#### 13. `cycl end_flag step_act`
+### 7.3 Execution Semantics  
+System evolution proceeds via event application:
+- Start from a well-formed $\Sigma_0$.
+- At each step, choose any $n$ with $\mathcal{E}(n) = \mathtt{running}$, apply its current instruction, yielding a new event $e$ and updated configuration $\Sigma'$.
+- If multiple such nodes exist and their events are **causally independent** ($e_1 \not\prec e_2$ and $e_2 \not\prec e_1$), they may be executed in any order—this captures **true parallelism**.
+- All operations preserve (WF1)–(WF4).
 
-> 重复执行 `step_act` 直到 `end_flag` 为真
-
-$$
-\frac{
-v = \text{read}(end\_flag) \\
-v \neq 0
-}{
-\langle \texttt{cycl } end\_flag\ step\_act, n, H \rangle \Downarrow \langle n, H \rangle
-}
-$$
-$$
-\frac{
-v = \text{read}(end\_flag) = 0 \\
-\langle step\_act, n, H \rangle \Downarrow \langle n_1, H_1 \rangle \\
-\langle \texttt{cycl } end\_flag\ step\_act, n_1, H_1 \rangle \Downarrow \langle n', H' \rangle
-}{
-\langle \texttt{cycl } end\_flag\ step\_act, n, H \rangle \Downarrow \langle n', H' \rangle
-}
-$$
+> There is **no global clock**; time is entirely defined by $\prec$.
 
 ---
 
-### 整个 instruct 段的大步语义
+## 8. Relativistic Observation (Distributed Perspective)
 
-定义：
-$$
-\texttt{run\_instruct}(n, H) \Downarrow (n', H')
-$$
-
-规则：
-- 若 $\mathcal{I} = []$，则 $\langle n, H \rangle \Downarrow \langle n[\mathsf{pc} \mapsto m+1], H \rangle$；
-- 若 $\mathcal{I} = i :: rest$，
-  $$
-  \frac{
-    \langle i, n, H \rangle \Downarrow \langle n_1, H_1 \rangle \\
-    \texttt{run\_rest}(rest, n_1[\mathsf{pc} \mapsto 2], H_1) \Downarrow \langle n', H' \rangle
-  }{
-    \texttt{run\_instruct}([i]++rest, n, H) \Downarrow \langle n', H' \rangle
-  }
-  $$
-
-> 保证了**线性顺序执行**，每条指令是原子黑盒。
+- Each node $n$ observes only the effects of events in its **causal past**.
+- When $n$ evaluates $S(n, f)$, the result reflects the last write to the physical source $(m, f_{\text{publ}})$ that is causally prior to $n$’s current event.
+- Concurrent modifications by causally unrelated nodes are **not visible** until a causal link is established (e.g., via $\mathtt{lift}$ or rebinding).
+- This enables **zero-copy sharing** with **explicit, static-analyzable dependency paths**.
 
 ---
 
-## 完备性证明
+## 9. Key Properties
 
-### AS 模型的图灵完备性
+### Theorem 1 (Well-Formedness Preservation)  
+All atomic operations preserve constraints (WF1)–(WF4).
 
-> - 使用 $\mathcal{D} = (r_0, r_1, ..., r_k)$ 模拟寄存器；
-> - 使用 `cycl` 实现循环，`cond` 实现条件跳转；
-> - 使用 `exe` 实现标签跳转（如 `exe L5` 对应 goto L5）；
-> - 程序计数器由 instruct 段的隐式 pc 模拟，或通过额外寄存器显式编码。
-> 即使没有显式“goto 跨指令”，`exe` 允许在 **单条指令内部** 跳转到任意标签，而该标签可包含对寄存器的修改和条件判断，从而模拟任意控制流图。
+### Theorem 2 (Termination of Resolution)  
+For any well-formed $\Sigma$ and node $n$, $\texttt{Resolve}(n, f)$ terminates in finitely many steps.
+
+### Theorem 3 (Unique Physical Source)  
+If $\texttt{Resolve}(n, f) = (m, f_{\text{publ}})$, then $f_{\text{publ}} \in \mathrm{dom}(\mathcal{D}_{\text{publ}}(m))$, and this pair is unique.
+
+### Theorem 4 (Turing Completeness)  
+AS can simulate any Turing machine by:
+- Using $\mathcal{D}_{\text{publ}}$ fields as registers,
+- Using $\mathtt{cond}$ for conditional branching,
+- Using $\mathtt{cycl}$ for loops,
+- Using $\mathtt{exec}$ for arbitrary jumps.
 
 ---
+
+## 10. Geometric Interpretation
+
+- **Space** = Tree topology, intrinsically defined by $\mathcal{A}(n)$ and $\mathcal{C}(n)$.
+- **Time** = Causal partial order $\prec$ over events.
+- **Parallelism** = Causally independent local evolutions.
+- **Observation** = Projection onto a node’s causal past.
+- **Global consistency** = Emergent property of causally closed configurations, not a synchronized global state.
+
+> **Arbor Strux is not a state machine evolving in global time,  
+> but a causal network of local machines,  
+> whose spatial structure is a tree,  
+> and whose temporal order is partial and observer-dependent.**
+
+--- 
+
+*End of Formal Semantics Document.*

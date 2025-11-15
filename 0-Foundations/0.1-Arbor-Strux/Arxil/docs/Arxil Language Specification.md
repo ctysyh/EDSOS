@@ -26,7 +26,7 @@
       - [3.4.2 Function Blocks (`fn`)](#342-function-blocks-fn)
       - [3.4.3 Language Blocks (`'lang'`)](#343-language-blocks-lang)
   - [4. Type System Interface](#4-type-system-interface)
-    - [4.1 The Role of `.tsltype`](#41-the-role-of-tsltype)
+    - [4.1 The Role of `.arxtype`](#41-the-role-of-arxtype)
     - [4.2 Type Annotations in Arxil](#42-type-annotations-in-arxil)
       - [Field Declarations (in `data` blocks)](#field-declarations-in-data-blocks)
       - [Function Parameter and Return Lists](#function-parameter-and-return-lists)
@@ -39,7 +39,7 @@
     - [5.1 Philosophy Recap: Syntax Freedom, Semantic Closure](#51-philosophy-recap-syntax-freedom-semantic-closure)
     - [5.2 The `fn` as a Logical Contract, Not a Function Call](#52-the-fn-as-a-logical-contract-not-a-function-call)
     - [5.3 Structured Sharing with `ance`: The CTRN Pattern](#53-structured-sharing-with-ance-the-ctrn-pattern)
-    - [5.4 Integrating Legacy Code via `'lang'` Blocks and `.tsltype` Wrappers](#54-integrating-legacy-code-via-lang-blocks-and-tsltype-wrappers)
+    - [5.4 Integrating Legacy Code via `'lang'` Blocks and `.arxtype` Wrappers](#54-integrating-legacy-code-via-lang-blocks-and-arxtype-wrappers)
 - [Appendix](#appendix)
   - [A. About Arxil opcodes](#a-about-arxil-opcodes)
     - [A.1 Ordinary Opcodes](#a1-ordinary-opcodes)
@@ -48,7 +48,7 @@
       - [A.1.3 Interruptible Execution Constraint](#a13-interruptible-execution-constraint)
     - [A.2 Generic Opcodes](#a2-generic-opcodes)
       - [A.2.1 `exec` — Execute a Logical Contract](#a21-exec--execute-a-logical-contract)
-      - [A.2.2 `cond` — Conditional Branching](#a22-cond--conditional-branching)
+      - [A.2.2 `cond` — Multi-way Conditional Dispatch](#a22-cond--multi-way-conditional-dispatch)
       - [A.2.3 `cycl` — Controlled Iteration Loop](#a23-cycl--controlled-iteration-loop)
       - [A.2.4 `wait` — Block Until Signaled](#a24-wait--block-until-signaled)
       - [A.2.5 `sgnl` — Signal a Blocked Node](#a25-sgnl--signal-a-blocked-node)
@@ -70,7 +70,7 @@
 
 ### 1.1 Role and Scope
 
-This document, the *Arxil Language Specification*, defines the official textual syntax for expressing programs that conform to the Tree-Stacked (AS) computational model. It serves as the primary interface between human developers (and tooling) and the AS runtime system.
+This document, the *Arxil Language Specification*, defines the official textual syntax for expressing programs that conform to the Arbor Strux (AS) computational model. It serves as the primary interface between human developers (and tooling) and the AS runtime system.
 
 The scope of this specification is strictly limited to the **lexical and syntactic structure** of the Arxil language, along with the **design intent** behind its constructs. It describes *how* to write a valid Arxil program but does not redefine the underlying computational semantics, memory model, or formal guarantees of the AS system. Those foundational aspects are rigorously defined in separate documents: *AS Computational Model* and *AS Formal Semantics and Verification*.
 
@@ -104,9 +104,9 @@ All examples in this document are illustrative and may omit certain details (suc
 
 The Arxil Language Specification defines the syntactic surface of the language, but its meaning is deeply rooted in a set of foundational computational and formal models. This specification assumes the reader's familiarity with these underlying concepts and serves as a bridge between high-level source code and their precise, low-level semantics.
 
-*   **AS Computational Model**: The fundamental execution paradigm of Arxil is the Tree-Stacked (AS) computational model. Every `node` declaration, every structural operation (`psh`, `pop`, `lft`), and the very notion of state residing in fields are direct textual representations of entities and processes defined in the *AS Computational Model* document. This model establishes the core principles of "computation as structural evolution," node-based concurrency, and structured sharing.
+*   **AS Computational Model**: The fundamental execution paradigm of Arxil is the Arbor Strux (AS) computational model. Every `node` declaration, every structural operation (`psh`, `pop`, `lft`), and the very notion of state residing in fields are direct textual representations of entities and processes defined in the *AS Computational Model* document. This model establishes the core principles of "computation as structural evolution," node-based concurrency, and structured sharing.
 *   **Formal Semantics**: The exact, step-by-step behavior of all Arxil operations—both structural (like `Lift(n)`) and data-manipulating (like field resolution)—is formally specified using Separation Logic and operational semantics in the *AS Formal Semantics and Verification* document. This document provides the mathematical proof of correctness for the AS model and, by extension, for well-formed Arxil programs.
-*   **Field Resolution and Type System**: The mechanics of how field names are resolved at runtime (especially `ance` fields) and how types govern operations and memory layout are detailed in the *Arxil Field Resolution* and *Arxil Type System Architecture* documents, respectively. These specifications explain the two-phase pointer dereferencing process, the binding chain fulfillment model, and the contract-based nature of the `.tsltype` system.
+*   **Field Resolution and Type System**: The mechanics of how field names are resolved at runtime (especially `ance` fields) and how types govern operations and memory layout are detailed in the *Arxil Field Resolution* and *Arxil Type System Architecture* documents, respectively. These specifications explain the two-phase pointer dereferencing process, the binding chain fulfillment model, and the contract-based nature of the `.arxtype` system.
 
 This specification **does not redefine** these foundational concepts. Instead, it leverages them to prescribe the correct way to write Arxil source code that faithfully encodes them.
 
@@ -116,8 +116,8 @@ To maintain clarity and focus, the responsibilities of this document are strictl
 
 *   **This Document **(Arxil Language Specification):
     *   Defines the official lexical and syntactic grammar of Arxil (`.tsl` files).
-    *   Specifies the structure of type interface files (`.tsltype`).
-    *   Describes the static (compile-time) rules for program well-formedness, including scoping, name resolution, and basic type compatibility checks based on `.tsltype` contracts.
+    *   Specifies the structure of type interface files (`.arxtype`).
+    *   Describes the static (compile-time) rules for program well-formedness, including scoping, name resolution, and basic type compatibility checks based on `.arxtype` contracts.
     *   Provides high-level descriptions of the intended runtime effects of language constructs, always with reference to the formal documents for precision.
 
 *   **Excluded from This Document**:
@@ -151,7 +151,7 @@ Arxil reserves the following keywords, which cannot be used as identifiers:
 node, meta_data, data, code,
 imme, futu,
 ance, publ, priv,
-instruct, fn, inst_scri,
+instruct, inst, fn, inst_scri, reserve, resv,
 type, size, layout, ops, interop, validators, docs, hints,
 psh, pop, lft, mrg, dtc,
 actv, sgnl, wait, yiel, fnsh, warn,
@@ -161,7 +161,7 @@ this,
 true, false
 ```
 
-Note: Some keywords (e.g., `type`, `size`) belong to the `.tsltype` language and appear in Arxil only via type annotations or embedded constructs.
+Note: Some keywords (e.g., `type`, `size`) belong to the `.arxtype` language and appear in Arxil only via type annotations or embedded constructs.
 
 ### 2.4 Literals
 
@@ -203,7 +203,7 @@ Comments begin with `//` and extend to the end of the line. Block comments (`/* 
 
 ## 3. Syntactic Structure
 
-This section defines the concrete syntax of the Tree-Stacked Language (Arxil). The grammar is presented in Extended Backus–Naur Form (EBNF), as specified in the companion document *Arxil EBNF Specification*. All terminal symbols are enclosed in double quotes (`""`); non-terminals are capitalized; square brackets `[X]` denote optional components; and braces `{X}` denote zero or more repetitions.
+This section defines the concrete syntax of the Arbor Strux Language (Arxil). The grammar is presented in Extended Backus–Naur Form (EBNF), as specified in the companion document *Arxil EBNF Specification*. All terminal symbols are enclosed in double quotes (`""`); non-terminals are capitalized; square brackets `[X]` denote optional components; and braces `{X}` denote zero or more repetitions.
 
 ### 3.1 Top-Level Structure
 
@@ -255,7 +255,7 @@ ArraySize = "[", INTEGER, "]" ;
 ```
 
 Each field declaration consists of:
-- A **type specifier** (`TypeSpec`), which refers to an external `.tsltype` definition (see §4).
+- A **type specifier** (`TypeSpec`), which refers to an external `.arxtype` definition (see §4).
 - An optional **array size** (currently restricted to compile-time constants).
 - An **identifier** naming the field.
 
@@ -273,7 +273,7 @@ Fields are categorized along two orthogonal dimensions: **temporal scope** (`imm
 
     This formal resolution procedure, including its termination and uniqueness guarantees, is defined in detail in the **Arxil Field Resolution** document under the function `Resolve(n, f)`.
 
-All field names within a single node's `data` section **MUST** be unique, regardless of their category (`priv`/`publ`/`ance`). The type of each field, specified by `TypeSpec`, is resolved against the type environment established by the referenced `.tsltype` files (see Section 4).
+All field names within a single node's `data` section **MUST** be unique, regardless of their category (`priv`/`publ`/`ance`). The type of each field, specified by `TypeSpec`, is resolved against the type environment established by the referenced `.arxtype` files (see Section 4).
 
 ### 3.4 Code Section
 
@@ -298,9 +298,9 @@ PrivBlock     = "publ",     "{", { FnDecl }, "}" ;
 The `instruct` block holds the main linear sequence of operations executed when the node is scheduled. Each instruction consists of an opcode and two operand lists for source and destination. Their execution is controlled by `pc` (program counter) of the node.
 
 ```ebnf
-InstructBlock = "instruct", "{", { InstDecl }, "}" ;
+InstructBlock = "instruct", "{", { OrdnInst | ResvInst }, "}" ;
 
-InstDecl = OpCode, OperTarg, OperGoal, ";" ;
+OrdnInst = OpCode, OperTarg, OperGoal, ";" ;
 
 OpCode = IDENT ;
 
@@ -312,7 +312,7 @@ Operand = "(" IDENT ")" ;
 
 Operands refer to field names declared in the node’s `data` section. Parentheses around an identifier in an operand (e.g., `(x)`) are **ALWAYS** required.
 
-*   **Ordinary Opcodes**: Opcodes like `add`, `mul`, `and`, and `cpy` are Ordinary Opcodes. Their legality and precise runtime behavior are **entirely determined by the types of their operands in the scope of the data type of the `OperTarg`**. The compiler consults the `.tsltype` definitions to verify that the requested operation is supported (i.e., listed in the type's `ops` set) and to generate the correct low-level code (e.g., a native instruction, a library call, or a lowered instruction sequence). Arxil specifies 12 *recommended* Ordinary Opcodes, along with best practice guidelines for any custom Ordinary Opcodes, as detailed in Appendix A.1.
+*   **Ordinary Opcodes**: Opcodes like `add`, `mul`, `and`, and `cpy` are Ordinary Opcodes. Their legality and precise runtime behavior are **entirely determined by the types of their operands in the scope of the data type of the `OperTarg`**. The compiler consults the `.arxtype` definitions to verify that the requested operation is supported (i.e., listed in the type's `ops` set) and to generate the correct low-level code (e.g., a native instruction, a library call, or a lowered instruction sequence). Arxil specifies 12 *recommended* Ordinary Opcodes, along with best practice guidelines for any custom Ordinary Opcodes, as detailed in Appendix A.1.
 
 *   **Generic Opcodes**: Some operators are part of Arxil's reserved language operators, including `exec`, `cond` and `cycl`. They have special meanings and formats, falling under the exceptional cases difined here, as detailed in Appendix A.2.
 
@@ -364,24 +364,24 @@ The `LangTag` identifies the embedded language dialect. The contents of `LangCod
 
 ## 4. Type System Interface
 
-The Arxil language does not embed a built-in type system. Instead, it interfaces with an external, declarative type description mechanism based on `.tsltype` files. This design enables zero-runtime-overhead execution while preserving rich compile-time semantics for layout, operation selection, and interoperability.
+The Arxil language does not embed a built-in type system. Instead, it interfaces with an external, declarative type description mechanism based on `.arxtype` files. This design enables zero-runtime-overhead execution while preserving rich compile-time semantics for layout, operation selection, and interoperability.
 
-### 4.1 The Role of `.tsltype`
+### 4.1 The Role of `.arxtype`
 
-All types referenced in Arxil source code are defined externally in `.tsltype` files. A `.tsltype` file provides a complete, machine-readable specification of a type’s:
+All types referenced in Arxil source code are defined externally in `.arxtype` files. A `.arxtype` file provides a complete, machine-readable specification of a type’s:
 - Memory layout (size, field offsets),
 - Supported operations (e.g., `add`, `mul`, `set`),
 - Interoperability rules (e.g., implicit conversions, pointer compatibility),
 - Validation constraints (compile-time and runtime),
 - Documentation and optimization hints.
 
-The Arxil compiler consumes these `.tsltype` definitions during compilation to:
+The Arxil compiler consumes these `.arxtype` definitions during compilation to:
 - Compute field offsets within node data segments,
 - Validate that applied operations are supported by the operand types,
 - Generate correct lowering sequences (e.g., intrinsic calls, assembly mappings),
 - Enforce structural safety guarantees derived from the AS computational model.
 
-> **Note**: The syntax and semantics of `.tsltype` files are defined in a separate document, *The `.tsltype` Language Specification*. This section only describes how Arxil *uses* those definitions.
+> **Note**: The syntax and semantics of `.arxtype` files are defined in a separate document, *The `.arxtype` Language Specification*. This section only describes how Arxil *uses* those definitions.
 
 ### 4.2 Type Annotations in Arxil
 
@@ -407,7 +407,7 @@ data {
 }
 ```
 
-Here, `u32`, `Vec3f`, and `hardware::mmio_reg` are identifiers resolved against available `.tsltype` definitions. They are used without parentheses.
+Here, `u32`, `Vec3f`, and `hardware::mmio_reg` are identifiers resolved against available `.arxtype` definitions. They are used without parentheses.
 
 #### Function Parameter and Return Lists
 ```tsl
@@ -418,41 +418,41 @@ fn compute_hash ((BufferHandle) buf, (u64) len) => ((u64) hash) {
 
 These annotations serve as **interface contracts**. They do not introduce local storage; instead, they declare the expected type of the bound field at the call site. The Arxil compiler uses these annotations to:
 - Verify type compatibility during `exec` or `'lang'` block lowering,
-- Select appropriate opcodes or library calls (via the `.tsltype`’s `ops` section).
+- Select appropriate opcodes or library calls (via the `.arxtype`’s `ops` section).
 
 ### 4.3 Linking and Resolution
 
-Type resolution follows a hierarchical, module-like path convention. When the compiler encounters a type name such as `hardware::mmio_reg`, it searches for a corresponding `.tsltype` file using an implementation-defined search path (e.g., standard library paths, project-local `types/` directories).
+Type resolution follows a hierarchical, module-like path convention. When the compiler encounters a type name such as `hardware::mmio_reg`, it searches for a corresponding `.arxtype` file using an implementation-defined search path (e.g., standard library paths, project-local `types/` directories).
 
-The resolution process yields a **type descriptor** containing all metadata defined in the `.tsltype` file. This descriptor is then used throughout compilation for:
+The resolution process yields a **type descriptor** containing all metadata defined in the `.arxtype` file. This descriptor is then used throughout compilation for:
 - **Layout computation**: Determining the byte/bit size and alignment of fields.
-- **Opcode validation**: Ensuring that an instruction like `add %x %y %z` is only emitted if the `.tsltype` for the underlying type includes an `add` operation in its `ops` block.
+- **Opcode validation**: Ensuring that an instruction like `add %x %y %z` is only emitted if the `.arxtype` for the underlying type includes an `add` operation in its `ops` block.
 - **Interoperability checking**: Validating cross-type assignments or bindings (e.g., whether a `(u32)` can be implicitly converted to `(i64)` per the `interop` rules).
 
-Crucially, **no type information is retained at runtime**. The generated ArxilVM bytecode or native code contains only raw memory accesses and operation dispatches—no type tags, vtables, or dynamic checks. All safety and correctness must be ensured at compile time through the `.tsltype` contract.
+Crucially, **no type information is retained at runtime**. The generated ArxilVM bytecode or native code contains only raw memory accesses and operation dispatches—no type tags, vtables, or dynamic checks. All safety and correctness must be ensured at compile time through the `.arxtype` contract.
 
 > **Design Principle**: *Types are compile-time contracts, not runtime entities.* This aligns with Arxil’s goal of providing bare-metal performance while enabling high-level reasoning through external verification tools and disciplined composition.
 
 ### 4.4 Pointer Semantics and Arithmetic
 
-In Arxil, pointers are not a primitive language construct but a **derived capability** granted to specific types through their `.tsltype` definition. The creation, manipulation, and dereferencing of pointers are governed entirely by the type system contract.
+In Arxil, pointers are not a primitive language construct but a **derived capability** granted to specific types through their `.arxtype` definition. The creation, manipulation, and dereferencing of pointers are governed entirely by the type system contract.
 
 #### 4.4.1 Pointer as a Type Capability
-A type `T` can support pointer operations if and only if its `.tsltype` file explicitly declares this capability. This is done in the `interop` section by defining a corresponding pointer type, for example:
-```tsltype
-// In i32.tsltype
+A type `T` can support pointer operations if and only if its `.arxtype` file explicitly declares this capability. This is done in the `interop` section by defining a corresponding pointer type, for example:
+```arxtype
+// In i32.arxtype
 interop {
     pointer_type = ptr_i32;
 }
 ```
-The existence of `ptr_i32` (itself a type with its own `.tsltype` definition) enables the use of the address-of operator (`&`) on fields of type `i32` and allows opcodes like `set` and `get` to operate on values of type `ptr_i32`.
+The existence of `ptr_i32` (itself a type with its own `.arxtype` definition) enables the use of the address-of operator (`&`) on fields of type `i32` and allows opcodes like `set` and `get` to operate on values of type `ptr_i32`.
 
 #### 4.4.2 Pointer Arithmetic Rules
-Pointer arithmetic (e.g., `p + k`) is permitted if the pointer's underlying `.tsltype` defines the necessary operations (`add`, `sub`) in its `ops` block and includes the `pointer_arithmetic` property. The semantics of the arithmetic—specifically, whether the integer offset `k` is scaled by the size of the pointed-to type—are defined by this property.
+Pointer arithmetic (e.g., `p + k`) is permitted if the pointer's underlying `.arxtype` defines the necessary operations (`add`, `sub`) in its `ops` block and includes the `pointer_arithmetic` property. The semantics of the arithmetic—specifically, whether the integer offset `k` is scaled by the size of the pointed-to type—are defined by this property.
 
-For instance, the `.tsltype` for `ptr_i32` might contain:
-```tsltype
-// In ptr_i32.tsltype
+For instance, the `.arxtype` for `ptr_i32` might contain:
+```arxtype
+// In ptr_i32.arxtype
 ops {
     add {
         pointer_arithmetic = true; // Implies scaling by sizeof(i32)
@@ -474,7 +474,7 @@ This formal process guarantees that every valid pointer dereference ultimately a
 
 ## 5. Design Rationale and Usage Patterns *(Informative)*
 
-This section explains the underlying motivations behind key syntactic and semantic choices in Arxil. It is non-normative—its purpose is to guide correct usage, foster intuition, and illustrate idiomatic patterns that leverage the full power of the Tree-Stacked computational model.
+This section explains the underlying motivations behind key syntactic and semantic choices in Arxil. It is non-normative—its purpose is to guide correct usage, foster intuition, and illustrate idiomatic patterns that leverage the full power of the Arbor Strux computational model.
 
 ### 5.1 Philosophy Recap: Syntax Freedom, Semantic Closure
 
@@ -482,7 +482,7 @@ Arxil embodies a dual-layer design principle:
 
 > **“Syntax freedom, semantic closure.”**
 
-At the surface level, Arxil permits expressive flexibility: users may embed familiar high-level languages (e.g., C, Rust) within `'lang'` blocks, define rich type interfaces via `.tsltype` files, and organize logic using named instruction blocks (`fn`). This lowers the barrier to adoption and enables reuse of existing codebases.
+At the surface level, Arxil permits expressive flexibility: users may embed familiar high-level languages (e.g., C, Rust) within `'lang'` blocks, define rich type interfaces via `.arxtype` files, and organize logic using named instruction blocks (`fn`). This lowers the barrier to adoption and enables reuse of existing codebases.
 
 However, beneath this syntactic freedom lies a strictly closed semantic model. Every construct must ultimately compile down to a sequence of **pure Arxil instructions** that:
 - Operate only on fields declared in the current node’s `data` section,
@@ -518,7 +518,7 @@ This design enables:
 
 The `ance` field category is central to Arxil’s approach to safe, zero-copy data sharing. Unlike pointers or global variables, `ance` fields declare *intent* without assuming implementation—they are promises to be fulfilled later via structural operations.
 
-A canonical pattern is the **Cross Tree-Stacked Reference Node (CTRN)**:
+A canonical pattern is the **Cross Arbor Strux Reference Node (CTRN)**:
 
 1. A dedicated node (e.g., `buffer_ctrn`) is created with only `publ` fields:
    ```tsl
@@ -546,12 +546,12 @@ This pattern scales naturally across trees, supports dynamic reconfiguration, an
 
 > **Anti-Pattern**: Declaring shared state in `priv` or relying on global naming conventions. Always use `publ` + `ance` + explicit binding for inter-node communication.
 
-### 5.4 Integrating Legacy Code via `'lang'` Blocks and `.tsltype` Wrappers
+### 5.4 Integrating Legacy Code via `'lang'` Blocks and `.arxtype` Wrappers
 
 Arxil does not require rewriting the world. Instead, it provides a structured pathway to integrate legacy components:
 
-1. **Wrap external types** in `.tsltype` files, specifying size, layout, and available operations:
-   ```tsltype
+1. **Wrap external types** in `.arxtype` files, specifying size, layout, and available operations:
+   ```arxtype
    type MyLegacyStruct {
        name = "MyLegacyStruct";
        size = 64 bytes;
@@ -584,7 +584,7 @@ This approach allows gradual migration: legacy code runs unchanged inside a “A
 
 Ordinary Opcodes are user-defined, type-bound data transformation primitives that operate exclusively on node fields and immediate literals. They represent pure, side-effect-free computations whose semantics are fully determined by the static types of their operands and the target platform’s capabilities. Unlike structural or control-flow instructions, Ordinary Opcodes do not alter the AS tree topology, scheduling state, or execution context.
 
-Each Ordinary Opcode is declared within the `ops` block of a `.tsltype` file and invoked in Arxil source code via an `InstDecl` of the form:
+Each Ordinary Opcode is declared within the `ops` block of a `.arxtype` file and invoked in Arxil source code via an `InstDecl` of the form:
 
 ```tsl
 OpCode OperTarg OperGoal;
@@ -598,7 +598,7 @@ This read-write separation originates from the small-step operational semantics 
 
 #### A.1.1 Mandatory Specification Requirements
 
-Every custom Ordinary Opcode **must** explicitly define the following in its `.tsltype` declaration:
+Every custom Ordinary Opcode **must** explicitly define the following in its `.arxtype` declaration:
 
 1. **Name**  
    - Must be a valid Arxil identifier (see §2.2).  
@@ -627,7 +627,7 @@ Every custom Ordinary Opcode **must** explicitly define the following in its `.t
 4. **Type Consistency Rule**  
    - At compile time, the frontend resolves an opcode by:
      1. Identifying the static type $T$ of the first field in `OperTarg`,
-     2. Loading the `.tsltype` file for $T$,
+     2. Loading the `.arxtype` file for $T$,
      3. Selecting the first overload whose `inputs` match the actual operand types (fields → exact type match; literals → match `integer`).
    - Mismatch results in a compilation error.
 
@@ -648,7 +648,7 @@ To ensure that non-atomic Ordinary Opcodes can be safely interrupted (e.g., by `
 Let:
 - $W$ be the target platform’s register width in bits (e.g., 64 for x86_64),
 - $\mathcal{T}$ be the set of distinct field identifiers in `OperTarg`,
-- $\text{size}(f)$ be the bit-width of field $f$ (derived from its `.tsltype` `size` attribute),
+- $\text{size}(f)$ be the bit-width of field $f$ (derived from its `.arxtype` `size` attribute),
 - $N_{\text{imm}}$ be the number of integer literals in `OperGoal`.
 
 Then the total state required to save and restore the opcode’s execution context—comprising a micro-program counter, control flags, and all intermediate values—must not exceed:
@@ -706,25 +706,21 @@ FnName    = IDENT | "(" IDENT ")" ;
 exec ((a, b)) ((sum)) Adder;
 ```
 
-#### A.2.2 `cond` — Conditional Branching
+#### A.2.2 `cond` — Multi-way Conditional Dispatch
 
 - Effect
-  - Evaluates a boolean field and runs one of two labels based on its value.
+  - Evaluates the integer value of field `f` at runtime and executes the `v`-th instruction block in the provided list, where `v = load(f)`.
 
 - Syntax
 ```ebnf
-CondDecl = "cond", "(", Flag, ")", "(", "(", TrueLabel, ")", "(", FalseLabel, ")", ")", ";" ;
-Flag        = BOOLEAN ;
-TrueLabel   = InstructDecl | ExecDecl ;
-FalseLabel  = InstructDecl | ExecDecl ;
+CondDecl = "cond", "(", Flag, ")", "(", { Branch }, ")", ";" ;
+Flag        = IDENT ;
+Branch = "(", { OrdnInst | ExecDecl }, ")" ;
 ```
 
-> **Note**: `TrueLabel` or `FalseLabel` contains exactly independent instruction.
-
 - Semantics
-  - The `Flag` must name a field of Boolean type in the current node’s data section.
-  - Execution continues at `TrueLabel` if the flag is `true`; otherwise, at `FalseLabel`.
-  - Both labels must be statically resolvable (no computed gotos).
+  - The `Flag` must name a field of Integer type in the current node’s data section, and its value should not bigger than the number of the following ways.
+  - All `Branch` must be statically resolvable (no computed gotos).
 
 - Example
 ```tsl
@@ -739,8 +735,9 @@ cond (ready) ((exec ((a, b) (c, d)) process;) (exec ((a, e) (c, d)) retry;));
 - Syntax
 ```ebnf
 CyclDecl = "cycl", "(", DoneFlag, ")", "(", StepAction, ")", ";" ;
-DoneFlag   = BOOLEAN ;
-StepAction = InstructDecl | ExecDecl ;
+DoneFlag   = IDENT ;
+(* Note: Flag should contain an BOOLEAN *)
+StepAction = OrdnInst | ExecDecl ;
 ```
 
 - Semantics
@@ -762,14 +759,14 @@ cycl (loop_done) (exec ((prm, buf) (a, loop_done)) loop_body;);
 
 - Syntax
 ```ebnf
-WaitDecl = "wait", "(", WaitEvent, ")", "(", [Options], ")", ";" ;
-WaitEvent = IDENT ;
+WaitDecl = "wait", "(", WaitSemaphore, ")", "(", [Options], ")", ";" ;
+WaitSemaphore = IDENT ;
 Options   = IDENT ;
 ```
 
 - Semantics
   - This is a system call to the scheduler (ArxilVM/EDSOS).
-  - The `WaitEvent` identifier *declare* an event name to wait somebody `sgnl` the same event name.
+  - The `WaitSemaphore` identifier *declare* an event name to wait somebody `sgnl` the same event name.
   - The optional `Options` identifier may specify synchronization policy as defined by the runtime.
   - While blocked, the node retains all field values, register values and program counter state.
   - The node remains ineligible for scheduling until signaled.
@@ -791,14 +788,14 @@ wait (input_ready) ();
 
 - Syntax
 ```ebnf
-SgnlDecl = "sgnl", "(", WaitEvent, ")", "(", [Options], ")", ";" ;
-WaitEvent = IDENT ;
+SgnlDecl = "sgnl", "(", WaitSemaphore, ")", "(", [Options], ")", ";" ;
+WaitSemaphore = IDENT ;
 Options  = IDENT ;
 ```
 
 - Semantics
   - Dual to `wait`; forms a synchronization pair.
-  - The `WaitEvent` identifier must match the one used in a corresponding wait.
+  - The `WaitSemaphore` identifier must match the one used in a corresponding wait.
   - If no node is waiting on that event name, `sgnl` will be in undefined behavior inside Arxil, but the runtime (ArxilVM or EDSOS) may give an precise definition.
   - The exact signaling policy (e.g., FIFO, broadcast) is runtime-defined.
 
@@ -862,8 +859,8 @@ fnsh;
 
 - Syntax
 ```ebnf
-WarnDecl = "warn", "(", NodeNames, ")", ";" ;
-NodeNames = NodeRef, { ",", NodeRef } ;
+WarnDecl = "warn", "(", NodeList, ")", ";" ;
+NodeList = NodeRef, { ",", NodeRef } ;
 NodeRef   = "this" | "all" | IDENT ;
 ```
 
@@ -902,7 +899,7 @@ warn (worker1, worker2, this);
 
 ### A.3 Structural Opcodes
 
-Structural Opcodes are a class of instructions in the Tree-Stacked Language (Arxil) that directly manipulate the hierarchical structure of the computation tree as defined by the AS Computational Model. These opcodes correspond to atomic structural transformations formally specified in the *AS Formal Semantics and Verification* document. Unlike data-manipulating or control-flow instructions, Structural Opcodes alter node relationships, ownership, and binding topologies. Their execution is governed by separation logic rules that ensure memory safety, binding consistency, and structural integrity.
+Structural Opcodes are a class of instructions in the Arbor Strux Language (Arxil) that directly manipulate the hierarchical structure of the computation tree as defined by the AS Computational Model. These opcodes correspond to atomic structural transformations formally specified in the *AS Formal Semantics and Verification* document. Unlike data-manipulating or control-flow instructions, Structural Opcodes alter node relationships, ownership, and binding topologies. Their execution is governed by separation logic rules that ensure memory safety, binding consistency, and structural integrity.
 
 Each Structural Opcode must appear within an `instruct` block and operates relative to the lexical and runtime context of the enclosing node. All identifiers referenced in operand lists must be resolvable within the current node’s scope at compile time.
 

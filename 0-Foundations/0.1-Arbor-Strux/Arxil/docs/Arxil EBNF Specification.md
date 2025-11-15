@@ -4,7 +4,7 @@
 
 - [Arxil EBNF Specification](#arxil-ebnf-specification)
   - [Top-Level Structure](#top-level-structure)
-  - [.tsltype](#tsltype)
+  - [.arxtype](#arxtype)
   - [Node Declaration](#node-declaration)
     - [MetaData](#metadata)
     - [Data Section](#data-section)
@@ -27,10 +27,10 @@
 ## Top-Level Structure
 
 ```ebnf
-ArxilProgram = { .tsltype }, { .tsllib }, { NodeDecl } ;
+ArxilProgram = { .arxtype }, { .arxlib }, { NodeDecl } ;
 ```
 
-## .tsltype
+## .arxtype
 
 ```ebnf
 ArxilTypeFile = TypeDecl ;
@@ -170,7 +170,7 @@ NodeDecl = "node", IDENT, "{",
 ```ebnf
 MetaData = "meta_data", "{", { MetaDataBlock }, "}" ;
 MetaDataBlock = ("cptm" | "rntm"), "{", { MetaItem }, "}" ;
-MetaItem = (* reserved for referance of .tsltype, tooling, doc, layout hints, etc. *) ;
+MetaItem = (* reserved for referance of .arxtype, tooling, doc, layout hints, etc. *) ;
 ```
 
 ### Data Section
@@ -197,7 +197,7 @@ CodeSection = "code", "{",
                 [PrivBlock]
               "}" ;
 
-InstructBlock = "instruct", "{", { InstDecl }, "}" ;
+InstructBlock = "instruct", "{", { OrdnInst | ResvInst }, "}" ;
 AnceBlock     = "ance",     "{", { FnDecl }, "}" ;
 PublBlock     = "publ",     "{", { FnDecl }, "}" ;
 PrivBlock     = "publ",     "{", { FnDecl }, "}" ;
@@ -206,13 +206,44 @@ PrivBlock     = "publ",     "{", { FnDecl }, "}" ;
 #### Instruction Declarations
 
 ```ebnf
-InstructDecl = OpCode, OperTarg, OperGoal, ";" ;
+OrdnInst = OpCode, OperTarg, OperGoal, ";" ;
 
 OpName = IDENT ;
 
 OperTarg | OperGoal = "(", Operand, [{ Operand }], ")" ;
 
 Operand = IDENT | "(" IDENT ")" ;
+
+ResvInst = 
+    ExecDecl | CondDecl | CyclDecl |
+    WaitDecl | SgnlDecl | YielDecl | FnshDecl | WarnDecl |
+    PshDecl | PopDecl | LftDecl | MrgDecl | DtcDecl ;
+
+ExecDecl = "exec", "(", "(", [FieldList], ")", "(", [FieldList], ")", ")", IDENT, ";" ;
+CondDecl = "cond", "(", IDENT, ")", "(", "(", OrdnInst | ExecDecl, ")", "(", OrdnInst | ExecDecl, ")", ")", ";" ;
+CyclDecl = "cycl", "(", IDENT, ")", "(", OrdnInst | ExecDecl, ")", ";" ;
+WaitDecl = "wait", "(", IDENT, ")", "(", [IDENT], ")", ";" ;
+SgnlDecl = "sgnl", "(", IDENT, ")", "(", [IDENT], ")", ";" ;
+YielDecl = "yiel", "(", [IDENT], ")", ";" ;
+FnshDecl = "fnsh", ";" ;
+WarnDecl = "warn", "(", NodeList, ")", ";" ;
+
+FieldList = Field, { ",", Field } ;
+Field     = IDENT | "(" IDENT ")" ;
+NodeList  = NodeRef, { ",", NodeRef } ;
+NodeRef   = "this" | "all" | IDENT ;
+
+PshDecl = "psh", IDENT, "(", IDENT, "(", BindingList ")", "(", BindingList ")", "(", BindingList ")", ")", ";" ;
+PopDecl = "pop", IDENT, ["(", IDENT, ")"], ";" ;
+LftDecl = "lft", IDENT, "(", [BindingList], ")", "(", [BindingList], ")", ";" ;
+MrgDecl = "mrg", IDENT, ["(", STRING, ")"], ";" ;
+DtcDecl = "dtc", IDENT, "(", IDENT, "(", [DetachingList], ")", "(", [DetachingList], ")", "(", [DetachingList], ")", ")", ["(", STRING, ")"], ";" ;
+
+BindingList   = BindingPair , { ",", BindingPair } ;
+DetachingList = DetachingPair, { ",", DetachingPair } ;
+
+BindingPair   = "(", IDENT, "=>", IDENT, ")" ;
+DetachingPair = "(", IDENT, "-->", IDENT, ")" ;
 ```
 
 > *Only when "Operand" refers to a `fn` can it not wrapped in `()`.*

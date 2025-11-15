@@ -125,10 +125,10 @@ Rust 的所有权系统是对传统栈/堆模型的修补，而 AS **重新定�
 
 ---
 
-### 6.2 事件驱动 vs 回调地狱：EDSOS Event 的隔离设计
+### 6.2 事件驱动 vs 回调地狱：EDSOS Semaphore 的隔离设计
 
 传统回调在触发方栈上执行，易导致逻辑耦合与重入攻击。  
-AS 通过 **EDSOS Event** 实现“逻辑关联，物理隔离”：
+AS 通过 **EDSOS Semaphore** 实现“逻辑关联，物理隔离”：
 ```tsl
 // 触发方
 signal io_complete all;
