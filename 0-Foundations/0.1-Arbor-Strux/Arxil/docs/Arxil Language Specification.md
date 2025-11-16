@@ -2,6 +2,10 @@
 
 ---
 
+> v0.2.0
+
+---
+
 - [Arxil Language Specification](#arxil-language-specification)
   - [1. Introduction](#1-introduction)
     - [1.1 Role and Scope](#11-role-and-scope)
@@ -115,7 +119,7 @@ This specification **does not redefine** these foundational concepts. Instead, i
 To maintain clarity and focus, the responsibilities of this document are strictly delineated from those of its companion specifications:
 
 *   **This Document **(Arxil Language Specification):
-    *   Defines the official lexical and syntactic grammar of Arxil (`.tsl` files).
+    *   Defines the official lexical and syntactic grammar of Arxil (`.axl` files).
     *   Specifies the structure of type interface files (`.arxtype`).
     *   Describes the static (compile-time) rules for program well-formedness, including scoping, name resolution, and basic type compatibility checks based on `.arxtype` contracts.
     *   Provides high-level descriptions of the intended runtime effects of language constructs, always with reference to the formal documents for precision.
@@ -189,7 +193,7 @@ Valid escape sequences include:
 
 Arxil supports C++-style line comments:
 
-```tsl
+```axl
 // This is a comment
 ```
 
@@ -394,7 +398,7 @@ In Arxil source code, types appear exclusively as **annotations** on fields and 
 This form is used in two contexts:
 
 #### Field Declarations (in `data` blocks)
-```tsl
+```axl
 data {
     ance {
         BufferHandle shared_buffer;
@@ -410,7 +414,7 @@ data {
 Here, `u32`, `Vec3f`, and `hardware::mmio_reg` are identifiers resolved against available `.arxtype` definitions. They are used without parentheses.
 
 #### Function Parameter and Return Lists
-```tsl
+```axl
 fn compute_hash ((BufferHandle) buf, (u64) len) => ((u64) hash) {
     // ...
 }
@@ -495,13 +499,13 @@ This duality ensures that while developers enjoy ergonomic syntax, the resulting
 
 In traditional languages, a function call implies stack allocation, parameter copying, and return-value handling. In Arxil, a `fn` declaration is fundamentally different:
 
-```tsl
+```axl
 fn add_int ((i32)a, (i32)b) => ((i32)result) { ... }
 ```
 
 Here, `a`, `b`, and `result` are **not local variables**—they are *logical binding slots*. When invoked via `exec`, the caller explicitly maps concrete fields from its own `data` section (or ancestors’) onto these slots:
 
-```tsl
+```axl
 exec ((x, y) (sum)) add_int;
 ```
 
@@ -521,21 +525,21 @@ The `ance` field category is central to Arxil’s approach to safe, zero-copy da
 A canonical pattern is the **Cross Arbor Strux Reference Node (CTRN)**:
 
 1. A dedicated node (e.g., `buffer_ctrn`) is created with only `publ` fields:
-   ```tsl
+   ```axl
    node buffer_ctrn {
        data { publ { u8[4096] payload; } }
    }
    ```
 
 2. Other nodes declare `ance` fields expecting such data:
-   ```tsl
+   ```axl
    node consumer {
        data { ance { u8[4096] input_buffer; } }
    }
    ```
 
 3. During execution, a parent node uses `psh` to pre-bind and `lft` to fulfill:
-   ```tsl
+   ```axl
    psh c (consumer () (my_buffer => input_buffer));
    lft buf_node ((payload => my_buffer));
    ```
@@ -560,7 +564,7 @@ Arxil does not require rewriting the world. Instead, it provides a structured pa
    ```
 
 2. **Embed legacy logic** in `'lang'` blocks inside `fn` definitions:
-   ```tsl
+   ```axl
    fn compute ((f64)x) => ((f64)y) {
        'c' {
            y = legacy_math_library_sin(x);
@@ -586,7 +590,7 @@ Ordinary Opcodes are user-defined, type-bound data transformation primitives tha
 
 Each Ordinary Opcode is declared within the `ops` block of a `.arxtype` file and invoked in Arxil source code via an `InstDecl` of the form:
 
-```tsl
+```axl
 OpCode OperTarg OperGoal;
 ```
 
@@ -702,7 +706,7 @@ FnName    = IDENT | "(" IDENT ")" ;
   - The `FnName` must resolve to a visible function within the current node or an ancestor.
 
 - Example
-```tsl
+```axl
 exec ((a, b)) ((sum)) Adder;
 ```
 
@@ -723,7 +727,7 @@ Branch = "(", { OrdnInst | ExecDecl }, ")" ;
   - All `Branch` must be statically resolvable (no computed gotos).
 
 - Example
-```tsl
+```axl
 cond (ready) ((exec ((a, b) (c, d)) process;) (exec ((a, e) (c, d)) retry;));
 ```
 
@@ -746,7 +750,7 @@ StepAction = OrdnInst | ExecDecl ;
   - This construct enforces structured, verifiable loops aligned with the AS model’s deterministic execution.
 
 - Example
-```tsl
+```axl
 cycl (loop_done) (exec ((prm, buf) (a, loop_done)) loop_body;);
 ```
 
@@ -775,7 +779,7 @@ Options   = IDENT ;
   - `Options` must be recognized by the target runtime; unrecognized identifiers result in undefined behavior (typically treated as a default wait).
 
 - Example
-```tsl
+```axl
 wait (input_ready) ();
 ```
 
@@ -800,7 +804,7 @@ Options  = IDENT ;
   - The exact signaling policy (e.g., FIFO, broadcast) is runtime-defined.
 
 - Example
-```tsl
+```axl
 sgnl (input_ready) ();
 ```
 
@@ -823,7 +827,7 @@ Options  = IDENT ;
   - Unlike `wait`, no external signal is required for resumption.
 
 - Example
-```tsl
+```axl
 yiel (cooperative);
 ```
 
@@ -846,7 +850,7 @@ FnshDecl = "fnsh", ";" ;
   - No instructions may follow `fnsh` in the same basic block.
 
 - Example
-```tsl
+```axl
 fnsh;
 ```
 
@@ -876,7 +880,7 @@ NodeRef   = "this" | "all" | IDENT ;
   - The runtime may log additional context (e.g., exec trace, field dump).
 
 - Example
-```tsl
+```axl
 warn (worker1, worker2, this);
 ```
 

@@ -114,10 +114,10 @@ node libcall_example_main {
     }
 }
 
-// **增加一个特殊节点类型`lmtn`，表示对应于特定良好封装的lib，其中的字符编译器解析全部对应到lib**
-lmtn libcall_example_sdl {
+
+node libcall_example_sdl {
     meta_data {
-        lib sdl;
+        @lmtn lib sdl;
     }
     data {
         imme {

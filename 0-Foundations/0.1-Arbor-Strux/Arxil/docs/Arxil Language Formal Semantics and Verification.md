@@ -52,7 +52,7 @@ $\text{Resolve}$ 是一个偏函数，目标是将字段引用 $(n, f)$ 解析�
 ### `Push` 操作的扩展语义
 
 当执行  
-```tsl
+```axl
 push child (ChildType () (parent_field => child_field) ...)
 ```  
 在创建子节点 $c$ 后，必须执行：
@@ -68,7 +68,7 @@ $$
 ### `Lift` 操作的扩展语义
 
 当执行  
-```tsl
+```axl
 lift data_source ((source_field => local_ance_field))
 ```  
 必须满足：
