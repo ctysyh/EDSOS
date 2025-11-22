@@ -34,7 +34,7 @@
   每个操作码（opcode）的行为由其操作数类型的 `.arxtype` 定义，而非语言内置。
 
 - **后端无关，策略驱动**（Backend-Agnostic, Strategy-Driven）  
-  支持将同一操作映射到原生指令、库调用、LLVM IR、WASM 等任意目标表示。
+  支持将同一操作映射到原生指令、LLVM IR、WASM 等任意目标表示。
 
 ---
 
@@ -218,7 +218,7 @@ string_literal  = '"' .* '"' ;
 ### 5.3 从 Rust 学习编译器提示
 
 - 学习重点：**精确的编译器提示语言**。
-- 特别是它的**能力要求**，可以集成到
+- 特别是它的**能力要求**，可以集成到每一个实现的私有 `validators_block` 中，并提供具体的提示信息。
 
 ---
 
@@ -297,255 +297,93 @@ type complex_f32 {
 
 ---
 
-*End of Type Specification Document.*
+## Appendix
 
+> 语言规范中有关类型系统的规定的章节摘抄
 
-# Appendix
+### 1 The Role of `.arxtype`
 
-## Old version `.arxtype` EBNF
+All types referenced in Arxil source code are defined externally in `.arxtype` files. A `.arxtype` file provides a complete, machine-readable specification of a type’s:
+- Memory layout (size, field offsets),
+- Supported operations (e.g., `add`, `mul`, `set`),
+- Interoperability rules (e.g., implicit conversions, pointer compatibility),
+- Validation constraints (compile-time and runtime),
+- Documentation and optimization hints.
 
-### version 0.1
+The Arxil compiler consumes these `.arxtype` definitions during compilation to:
+- Compute field offsets within node data segments,
+- Validate that applied operations are supported by the operand types,
+- Generate correct lowering sequences (e.g., intrinsic calls, assembly mappings),
+- Enforce structural safety guarantees derived from the AS computational model.
 
-```ebnf
-ArxilTypeFile = TypeDecl ;
+> **Note**: The syntax and semantics of `.arxtype` files are defined in a separate document, *The `.arxtype` Language Specification*. This section only describes how Arxil *uses* those definitions.
 
-TypeDecl = "type", IDENT, "{",
-             TypeName,
-             TypeSize,
-             [TypeLayout],
-             [TypeOps],
-             [TypeInterop],
-             [TypeValidators],
-             [TypeDocs],
-             [TypeHints],
-           "}" ;
+### 2 Linking and Resolution
 
-TypeName = "name", "=", STRING, ";" ;
+When the compiler encounters a type name such as `int32_t` or `hardware.mmio_reg`, it searches for a corresponding `.arxtype` file. Programmers can also declare the file path of the type in `meta_data`.
 
-TypeSize = "size", "=", INTEGER, ("bits" | "bytes"), ";" ;
+The resolution process yields a **type descriptor** containing all metadata defined in the `.arxtype` file. This descriptor is then used throughout compilation for:
+- **Layout computation**: Determining the byte/bit size and alignment of fields.
+- **Opcode validation**: Ensuring that an instruction like `add %x %y %z` is only emitted if the `.arxtype` for the underlying type includes an `add` operation in its `ops` block.
+- **Interoperability checking**: Validating cross-type assignments or bindings (e.g., whether a `(u32)` can be implicitly converted to `(i64)` per the `interop` rules).
 
-TypeLayout = "layout", "{", { LayoutField }, "}" ;
+Crucially, **no type information is retained at runtime**. The generated ArxilVM bytecode or native code contains only raw memory accesses and operation dispatches—no type tags, vtables, or dynamic checks. All safety and correctness must be ensured at compile time through the `.arxtype` contract.
 
-LayoutField = IDENT, "{",
-                "offset", "=", BitExpr, ";",
-                "width",  "=", BitExpr, ";",
-                "type",   "=", IDENT, ";",
-                ["tag", "=", STRING, ";"],   (* Optional tag, e.g., "reserved" *)
-              "}" ;
+> **Design Principle**: *Types are compile-time contracts, not runtime entities.* This aligns with Arxil’s goal of providing bare-metal performance while enabling high-level reasoning through external verification tools and disciplined composition.
 
-BitExpr = INTEGER ;  (* In the future, it can be extended to simple arithmetic expressions, e.g., "8*4" *)
+### 3 About Ordinary Opcode in `.arxtype`
 
-TypeOps = "ops", "{", { OpDecl }, "}" ;
+Opcodes like `add`, `mul`, `and`, and `cpy` are Ordinary Opcodes. Their legality and precise runtime behavior are **entirely determined by the types of their operands in the scope of the data type of the `OperTarg`**. The compiler consults the `.arxtype` definitions to verify that the requested operation is supported (i.e., listed in the type's `ops` set) and to generate the correct low-level code.
 
-OpDecl = IDENT, "{",
-           [OpNative],
-           [OpAsmMap],
-           [OpLibcall],
-           [OpIntrinsic],
-           [OpPointerArith],
-           [OpUnary],
-           [OpMayTrap],
-           [OpLoweredArxil],
-         "}" ;
+Every custom Ordinary Opcode **must** explicitly define the following in its `.arxtype` declaration:
 
-OpNative      = "native", "=", BOOLEAN, ";" ;
-OpUnary       = "unary", "=", BOOLEAN, ";" ;
-OpMayTrap     = "may_trap", "=", BOOLEAN, ";" ;
+1. **Name**
+   - Must be a valid Arxil identifier (see §2.2).  
+   - Recommended naming convention: `TypeName.opName` (e.g., `Matrix4x4.inv`). The dot (`.`) is part of the name string and carries no syntactic meaning; it serves only as a human-readable logically namespace delimiter.
 
-OpPointerArith = "pointer_arithmetic", "=", BOOLEAN, ";",
-                 ["scale_by", "=", INTEGER, ";"] ;
+2. **Operand Signature**
+   - Must specify one or more *overloads*, each defining:
+     - An ordered list of operands types, which may include:
+       - Concrete type references (e.g., `(int32_t)`),
+       - The special pseudo-type `integer` to match compile-time integer literals.
 
-OpAsmMap = "asm", "{", { AsmTarget }, "}" ;
+3. **Target Implementations**
+   - For each supported backend, *expected to* provide either:
+     - A native assembly template (with placeholders `@asm`), or
+   - A default implementation expressed as a sequence of standard type set `instmm` statements.
+   - If an operation is atomic on a given platform, the corresponding native entry **must** be prefixed with `@atomic`.
 
-AsmTarget = IDENT, "=", STRING, ";" ;
-(* e.g., x86_64 = "addss %xmm0, %xmm1"; *)
+4. **Type Consistency Rule**
+   - At compile time, the frontend resolves an opcode by:
+     1. Identifying the static type $T$ of the first field in `OperTarg`,
+     2. Loading the `.arxtype` file for $T$,
+     3. Selecting the first overload whose `inputs` match the actual operand types (fields → exact type match; literals → match `integer`).
+   - Mismatch results in a compilation error.
 
-OpIntrinsic = "intrinsic", "=", BOOLEAN, ";" ;
+### 4 Interruptible Execution Constraint
 
-OpLoweredArxil = "lowered", "=", InstScriBlock, ";" ;
+To ensure that non-atomic Ordinary Opcodes can be safely interrupted (e.g., by `yiel`, trap, or preemption) and later resumed without loss of correctness, their implementation must satisfy a strict bound on execution state size.
 
-InstScriBlock = "'inst_scri'", "{", { InstLine }, "}" ;
+Let:
+- $W$ be the target platform’s register width in bits (e.g., 64 for x86_64),
+- $\mathcal{T}$ be the set of distinct field identifiers in `OperTarg`,
+- $\text{size}(f)$ be the bit-width of field $f$ (derived from its `.arxtype` `size` attribute),
+- $N_{\text{imm}}$ be the number of integer literals in `OperGoal`.
 
-InstLine = IDENT, { Operand }, ";" ;
+Then the total state required to save and restore the opcode’s execution context—comprising a micro-program counter, control flags, and all intermediate values—must not exceed:
 
-Operand = IDENT | INTEGER | "(" IDENT ")" ;
-(* IDENT here refers to the field name in the layout, or temporary register *)
+$$
+\left( \sum_{f \in \mathcal{T}} \text{size}(f) \right) + (N_{\text{gpr}} - N_{\text{imm}}) \times W \quad \text{bits}.
+$$
 
-TypeInterop = "interop", "{",
-                [InteropPointerType],
-                [InteropImplicitFrom],
-                [InteropImplicitTo],
-                [InteropBindingCompat],
-                [InteropArrayOK],
-              "}" ;
+**Rationale**:
+- Fields in `OperTarg` serve as *scratch space*: their final value is defined by the opcode, so their storage may be reused for intermediate computation.
+- Fields in `OperGoal` are read-only and contribute no scratch capacity.
+- Each immediate literal requires one register slot for loading, hence the $N_{\text{imm}} \times W$ term.
+- The general-purpose registers of the target platform provide the space of $N_{\text{gpr}} \times W$.
 
-InteropPointerType     = "pointer_type", "=", IDENT, ";" ;
-InteropImplicitFrom    = "implicit_from", "=", TypeList, ";" ;
-InteropImplicitTo      = "implicit_to",   "=", TypeList, ";" ;
-InteropBindingCompat   = "binding_compatible_with", "=", TypeList, ";" ;
-InteropArrayOK         = "array_element_ok", "=", BOOLEAN, ";" ;
+For in-place operations (e.g., `add (a) (a b)`), the initial value of `a` must be preserved until it is fully consumed. During that interval, `a` does not count as available scratch space. The above formula uses a conservative worst-case estimate.
 
-TypeList = "(", [IDENT, { ",", IDENT }], ")" ;
+Operations marked `@atomic` are exempt from this constraint, as they execute uninterruptibly.
 
-TypeValidators = "validators", "{",
-                   [CompileTimeChecks],
-                   [RuntimeChecks],
-                 "}" ;
-
-CompileTimeChecks = "compile_time", "=", CheckList, ";" ;
-
-RuntimeChecks = "runtime", "{", { RuntimeCheckDecl }, "}" ;
-
-CheckList = "(", [STRING, { ",", STRING }], ")" ;
-
-RuntimeCheckDecl = IDENT, "{",
-                     "condition", "=", ConditionExpr, ";",
-                     "action", "=", ActionSpec, ";",
-                     ["enabled_by_default", "=", BOOLEAN, ";"],
-                     ["requires", "=", CapabilityList, ";"],
-                   "}" ;
-
-ConditionExpr = STRING ;  (* e.g., "address == 0" *)
-ActionSpec = STRING ;     (* e.g., "trap PTR_NULL" *)
-CapabilityList = "(", [IDENT, { ",", IDENT }], ")" ;
-
-TypeDocs = "docs", "{",
-             [DocUsage],
-             [DocErrors],
-           "}" ;
-
-DocUsage = "usage", "=", STRING, ";" ;
-DocErrors = "errors", "{", { ErrorCodeMapping }, "}" ;
-
-ErrorCodeMapping = IDENT, "=", STRING, ";" ;
-(* e.g., PTR_DANGLING = "Dangling pointer dereference" *)
-
-TypeHints = "hints", "{", { HintDecl }, "}" ;
-
-HintDecl = IDENT, "=", (BOOLEAN | INTEGER | STRING), ";" ;
-(* e.g., cache_line_aligned = true; simd_eligible = false; *)
-```
-
-### version 0.2.0
-
-```ebnf
-(* Top Level *)
-ArxilTypeFile = TypeDecl ;
-
-TypeDecl = "type", IDENT, "{",
-             TypeName,
-             TypeSize,
-             [TypeLayout],
-             [TypeOps],
-             [TypeInterop],
-             [TypeValidators],
-             [TypeDocs],
-             [TypeHints],
-           "}" ;
-
-(* Basic Info *)
-TypeName = "name", "=", STRING, ";" ;
-TypeSize = "size", "=", INTEGER, ("bits" | "bytes"), ";" ;
-
-(* Memory Layout *)
-TypeLayout = "layout", "{", { LayoutField }, "}" ;
-LayoutField = IDENT, "{",
-                "offset", "=", BitExpr, ";",
-                "width",  "=", BitExpr, ";",
-                "type",   "=", IDENT, ";",
-                ["tag", "=", STRING, ";"],
-              "}" ;
-BitExpr = INTEGER ;  (* Future: simple arithmetic *)
-
-(* Operations and Strategies *)
-TypeOps = "ops", "{", { OpDecl | OpAlias }, "}" ;
-
-OpDecl = IDENT, "{",
-           [OpUnary],
-           [OpMayTrap],
-           [OpPointerArith],
-           { Implementation },
-         "}" ;
-
-OpAlias = "alias", IDENT, "as", IDENT, "{", Implementation, "}" ;
-
-Implementation =
-    ( "asm" | "intrinsic" ),
-    "{",
-      [TargetSelector],
-      CodeOrRef,
-      [FallbackRef],
-    "}" ;
-
-TargetSelector = "target", "=", TargetSpec, ";" ;
-TargetSpec = IDENT, { "+", IDENT } ;  (* e.g., x86_64+sse4.2 *)
-
-CodeOrRef =
-    ("code", "=", STRING, ";") |
-    ("block", "=", LangTaggedBlock, ";") ;
-
-LangTaggedBlock = "'", LangTag, "'", "{", RawCode, "}" ;
-LangTag = "inst_scri" | "llvm_ir" | "wasm_text" | "ptx" | IDENT ;
-RawCode = (* raw string with brace balancing *) ;
-
-FallbackRef = "fallback", "=", IDENT, ";" ;
-
-(* Operation Flags *)
-OpUnary       = "unary", "=", BOOLEAN, ";" ;
-OpMayTrap     = "may_trap", "=", BOOLEAN, ";" ;
-OpPointerArith = "pointer_arithmetic", "=", BOOLEAN, ";",
-                 ["scale_by", "=", INTEGER, ";"] ;
-
-(* Interoperability *)
-TypeInterop = "interop", "{",
-                [InteropPointerType],
-                [InteropImplicitFrom],
-                [InteropImplicitTo],
-                [InteropBindingCompat],
-                [InteropArrayOK],
-              "}" ;
-
-InteropPointerType     = "pointer_type", "=", IDENT, ";" ;
-InteropImplicitFrom    = "implicit_from", "=", TypeList, ";" ;
-InteropImplicitTo      = "implicit_to",   "=", TypeList, ";" ;
-InteropBindingCompat   = "binding_compatible_with", "=", TypeList, ";" ;
-InteropArrayOK         = "array_element_ok", "=", BOOLEAN, ";" ;
-TypeList = "(", [IDENT, { ",", IDENT }], ")" ;
-
-(* Validation *)
-TypeValidators = "validators", "{",
-                   [CompileTimeChecks],
-                   [RuntimeChecks],
-                 "}" ;
-
-CompileTimeChecks = "compile_time", "=", CheckList, ";" ;
-CheckList = "(", [STRING, { ",", STRING }], ")" ;
-
-RuntimeChecks = "runtime", "{", { RuntimeCheckDecl }, "}" ;
-RuntimeCheckDecl = IDENT, "{",
-                     "condition", "=", ConditionExpr, ";",
-                     "action", "=", ActionSpec, ";",
-                     ["enabled_by_default", "=", BOOLEAN, ";"],
-                     ["requires", "=", CapabilityList, ";"],
-                   "}" ;
-
-ConditionExpr = Expr ;
-Expr = Term, { ("&&" | "||"), Term } ;
-Term = Factor, { ("==" | "!=" | "<" | ">"), Factor } ;
-Factor = IDENT | INTEGER | "(" Expr ")" ;
-
-ActionSpec = STRING ;     (* e.g., "trap ADD_OVERFLOW" *)
-CapabilityList = "(", [IDENT, { ",", IDENT }], ")" ;
-
-(* Documentation & Hints *)
-TypeDocs = "docs", "{",
-             [DocUsage],
-             [DocErrors],
-           "}" ;
-DocUsage = "usage", "=", STRING, ";" ;
-DocErrors = "errors", "{", { ErrorCodeMapping }, "}" ;
-ErrorCodeMapping = IDENT, "=", STRING, ";" ;
-
-TypeHints = "hints", "{", { HintDecl }, "}" ;
-HintDecl = IDENT, "=", (BOOLEAN | INTEGER | STRING), ";" ;
-```
+Violations of this constraint render the opcode ineligible for use in interruptible contexts and will cause compilation failure.

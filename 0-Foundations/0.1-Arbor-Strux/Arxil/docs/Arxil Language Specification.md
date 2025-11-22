@@ -316,7 +316,7 @@ Operand = "(" IDENT ")" ;
 
 Operands refer to field names declared in the node’s `data` section. Parentheses around an identifier in an operand (e.g., `(x)`) are **ALWAYS** required.
 
-*   **Ordinary Opcodes**: Opcodes like `add`, `mul`, `and`, and `cpy` are Ordinary Opcodes. Their legality and precise runtime behavior are **entirely determined by the types of their operands in the scope of the data type of the `OperTarg`**. The compiler consults the `.arxtype` definitions to verify that the requested operation is supported (i.e., listed in the type's `ops` set) and to generate the correct low-level code (e.g., a native instruction, a library call, or a lowered instruction sequence). Arxil specifies 12 *recommended* Ordinary Opcodes, along with best practice guidelines for any custom Ordinary Opcodes, as detailed in Appendix A.1.
+*   **Ordinary Opcodes**: Opcodes like `add`, `mul`, `and`, and `cpy` are Ordinary Opcodes. Their legality and precise runtime behavior are **entirely determined by the types of their operands in the scope of the data type of the `OperTarg`**. The compiler consults the `.arxtype` definitions to verify that the requested operation is supported (i.e., listed in the type's `ops` set) and to generate the correct low-level code. Arxil specifies 12 *recommended* Ordinary Opcodes, along with best practice guidelines for any custom Ordinary Opcodes, as detailed in Appendix A.1.
 
 *   **Generic Opcodes**: Some operators are part of Arxil's reserved language operators, including `exec`, `cond` and `cycl`. They have special meanings and formats, falling under the exceptional cases difined here, as detailed in Appendix A.2.
 
@@ -406,12 +406,12 @@ data {
     publ {
         u32 counter;
         Vec3f position;
-        hardware::mmio_reg control_reg;
+        hardware.mmio_reg control_reg;
     }
 }
 ```
 
-Here, `u32`, `Vec3f`, and `hardware::mmio_reg` are identifiers resolved against available `.arxtype` definitions. They are used without parentheses.
+Here, `u32`, `Vec3f`, and `hardware.mmio_reg` are identifiers resolved against available `.arxtype` definitions. They are used without parentheses.
 
 #### Function Parameter and Return Lists
 ```axl
@@ -426,7 +426,7 @@ These annotations serve as **interface contracts**. They do not introduce local 
 
 ### 4.3 Linking and Resolution
 
-Type resolution follows a hierarchical, module-like path convention. When the compiler encounters a type name such as `hardware::mmio_reg`, it searches for a corresponding `.arxtype` file using an implementation-defined search path (e.g., standard library paths, project-local `types/` directories).
+When the compiler encounters a type name such as `int32_t` or `hardware.mmio_reg`, it searches for a corresponding `.arxtype` file. Programmers can also declare the file path of the type in `meta_data`.
 
 The resolution process yields a **type descriptor** containing all metadata defined in the `.arxtype` file. This descriptor is then used throughout compilation for:
 - **Layout computation**: Determining the byte/bit size and alignment of fields.
@@ -604,31 +604,23 @@ This read-write separation originates from the small-step operational semantics 
 
 Every custom Ordinary Opcode **must** explicitly define the following in its `.arxtype` declaration:
 
-1. **Name**  
+1. **Name**
    - Must be a valid Arxil identifier (see §2.2).  
    - Recommended naming convention: `TypeName.opName` (e.g., `Matrix4x4.inv`). The dot (`.`) is part of the name string and carries no syntactic meaning; it serves only as a human-readable logically namespace delimiter.
 
-2. **Operand Signature**  
+2. **Operand Signature**
    - Must specify one or more *overloads*, each defining:
-     - An ordered list of input types (`inputs`), which may include:
+     - An ordered list of operands types, which may include:
        - Concrete type references (e.g., `(int32_t)`),
        - The special pseudo-type `integer` to match compile-time integer literals.
-     - An ordered list of output types (`outputs`), all of which must be concrete types.
-   - Syntax (EBNF-compatible):
-     ```ebnf
-     overload {
-         inputs = "(" [ TypeSpec [Ident] { "," TypeSpec [Ident] } ] ")";
-         outputs = "(" [ TypeSpec [Ident] { "," TypeSpec [Ident] } ] ")";
-     }
-     ```
 
-3. **Target Implementations**  
-   - For each supported backend, provide either:
-     - A native assembly template (with placeholders like `${field}` or `${imm}`), or
-     - A ArxilVM fallback expressed as a sequence of standard-library `instruct` statements.
+3. **Target Implementations**
+   - For each supported backend, *expected to* provide either:
+     - A native assembly template (with placeholders `@asm`), or
+   - A default implementation expressed as a sequence of standard type set `instmm` statements.
    - If an operation is atomic on a given platform, the corresponding native entry **must** be prefixed with `@atomic`.
 
-4. **Type Consistency Rule**  
+4. **Type Consistency Rule**
    - At compile time, the frontend resolves an opcode by:
      1. Identifying the static type $T$ of the first field in `OperTarg`,
      2. Loading the `.arxtype` file for $T$,
@@ -671,7 +663,7 @@ For in-place operations (e.g., `add (a) (a b)`), the initial value of `a` must b
 
 Operations marked `@atomic` are exempt from this constraint, as they execute uninterruptibly.
 
-Violations of this constraint render the opcode ineligible for use in interruptible contexts and will cause compilation failure unless explicitly overridden by a `@uninterruptible` annotation (not recommended for general use).
+Violations of this constraint render the opcode ineligible for use in interruptible contexts and will cause compilation failure.
 
 ---
 
