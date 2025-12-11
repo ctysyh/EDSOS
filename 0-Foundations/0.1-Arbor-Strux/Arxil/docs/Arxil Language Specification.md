@@ -2,7 +2,7 @@
 
 ---
 
-> v0.2.0
+> v0.2.1
 
 ---
 
@@ -24,11 +24,14 @@
   - [3. Syntactic Structure](#3-syntactic-structure)
     - [3.1 Top-Level Structure](#31-top-level-structure)
     - [3.2 Node Declaration](#32-node-declaration)
-    - [3.3 Data Section](#33-data-section)
-    - [3.4 Code Section](#34-code-section)
-      - [3.4.1 Instruction Block (`instruct`)](#341-instruction-block-instruct)
-      - [3.4.2 Function Blocks (`fn`)](#342-function-blocks-fn)
-      - [3.4.3 Language Blocks (`'lang'`)](#343-language-blocks-lang)
+    - [3.3 MetaData](#33-metadata)
+      - [3.3.1 Type References](#331-type-references)
+      - [3.3.2 `causal` Block](#332-causal-block)
+    - [3.4 Data Section](#34-data-section)
+    - [3.5 Code Section](#35-code-section)
+      - [3.5.1 Instruction Block (`instruct`)](#351-instruction-block-instruct)
+      - [3.5.2 Function Blocks (`fn`)](#352-function-blocks-fn)
+      - [3.5.3 Language Blocks (`'lang'`)](#353-language-blocks-lang)
   - [4. Type System Interface](#4-type-system-interface)
     - [4.1 The Role of `.arxtype`](#41-the-role-of-arxtype)
     - [4.2 Type Annotations in Arxil](#42-type-annotations-in-arxil)
@@ -54,11 +57,13 @@
       - [A.2.1 `exec` — Execute a Logical Contract](#a21-exec--execute-a-logical-contract)
       - [A.2.2 `cond` — Multi-way Conditional Dispatch](#a22-cond--multi-way-conditional-dispatch)
       - [A.2.3 `cycl` — Controlled Iteration Loop](#a23-cycl--controlled-iteration-loop)
-      - [A.2.4 `wait` — Block Until Signaled](#a24-wait--block-until-signaled)
-      - [A.2.5 `sgnl` — Signal a Blocked Node](#a25-sgnl--signal-a-blocked-node)
-      - [A.2.6 `yiel` — Voluntary Yield](#a26-yiel--voluntary-yield)
-      - [A.2.7 `fnsh` — Terminate Node](#a27-fnsh--terminate-node)
-      - [A.2.8 `warn` — Emit Diagnostic Warning](#a28-warn--emit-diagnostic-warning)
+      - [A.2.4 `emit` — Emit a Named Causal Commitment](#a24-emit--emit-a-named-causal-commitment)
+      - [A.2.5 `obsv` — Declare a Causal Readiness Constraint](#a25-obsv--declare-a-causal-readiness-constraint)
+      - [A.2.6 `wait` — Block Until Signaled](#a26-wait--block-until-signaled)
+      - [A.2.7 `sgnl` — Signal a Blocked Node](#a27-sgnl--signal-a-blocked-node)
+      - [A.2.8 `yiel` — Voluntary Yield](#a28-yiel--voluntary-yield)
+      - [A.2.9 `fnsh` — Terminate Node](#a29-fnsh--terminate-node)
+      - [A.2.10 `warn` — Emit Diagnostic Warning](#a210-warn--emit-diagnostic-warning)
       - [Summary Table](#summary-table)
     - [A.3 Structural Opcodes](#a3-structural-opcodes)
       - [A.3.1 `psh` — Push a New Child Node](#a31-psh--push-a-new-child-node)
@@ -240,7 +245,25 @@ The sections serve distinct purposes:
 > **Note (Non-Normative):**  
 > The syntactic ordering of sections reflects the stable ABI layout of a runtime node, ensuring deterministic memory organization.
 
-### 3.3 Data Section
+### 3.3 MetaData
+
+#### 3.3.1 Type References
+
+<TODO>
+
+#### 3.3.2 `causal` Block
+
+The `causal` block in `meta_data` is optional that depending to whether two of Generic Opcodes `emit` or `obsv` is used inside the node or is expected to appear in descendant nodes.
+
+```ebnf
+CausalDecl = "causal", "{", { CausalList }, "}" ;
+
+CausalList = ("emits" | "obses"), "{", CausalLabel, { ",", CausalLabel }, "}" ;
+
+CausalLabel = "`", STRING, "`" ;
+```
+
+### 3.4 Data Section
 
 > The `data` section declares the persistent state of the node, partitioned into two temporal categories (`imme` for immediate, `futu` for future-resolved) and three visibility categories (`ance`, `publ`, `priv`). Only the visibility categories affect name resolution and sharing semantics.
 
@@ -279,7 +302,7 @@ Fields are categorized along two orthogonal dimensions: **temporal scope** (`imm
 
 All field names within a single node's `data` section **MUST** be unique, regardless of their category (`priv`/`publ`/`ance`). The type of each field, specified by `TypeSpec`, is resolved against the type environment established by the referenced `.arxtype` files (see Section 4).
 
-### 3.4 Code Section
+### 3.5 Code Section
 
 The `code` section contains all executable content of the node, organized into instruction blocks and named functions.
 
@@ -297,7 +320,7 @@ PublBlock     = "publ",     "{", { FnDecl }, "}" ;
 PrivBlock     = "publ",     "{", { FnDecl }, "}" ;
 ```
 
-#### 3.4.1 Instruction Block (`instruct`)
+#### 3.5.1 Instruction Block (`instruct`)
 
 The `instruct` block holds the main linear sequence of operations executed when the node is scheduled. Each instruction consists of an opcode and two operand lists for source and destination. Their execution is controlled by `pc` (program counter) of the node.
 
@@ -322,7 +345,7 @@ Operands refer to field names declared in the node’s `data` section. Parenthes
 
 *   **Structural Opcodes**: Certain opcodes directly correspond to atomic operations on the AS tree structure itself. Their static and dynamic semantics are tightly coupled to the AS Computational Model. A complete list of these opcodes is provided in Appendix A.3.
 
-#### 3.4.2 Function Blocks (`fn`)
+#### 3.5.2 Function Blocks (`fn`)
 
 Named instruction subsequences are declared using the `fn` keyword. A function has an explicit parameter list and return list, which serve as a *binding contract*—not as runtime stack frames.
 
@@ -344,7 +367,7 @@ FnBody = { LangBlock } ;
 
 The parameter and return lists of a `fn` serve as **binding slots**. When a `fn` is invoked via the `exec` instruction, the caller provides concrete field names from its own context to bind to these slots. Execution then jumps directly to the `fn`'s instruction sequence, operating on the caller's original data without any stack frame creation or data copying.
 
-#### 3.4.3 Language Blocks (`'lang'`)
+#### 3.5.3 Language Blocks (`'lang'`)
 
 To support interoperability and developer ergonomics, function bodies may embed code from other languages within quoted language blocks.
 
@@ -673,9 +696,9 @@ Generic Opcodes are a set of reserved instructions in Arxil that govern control 
 
 All Generic Opcodes appear as standalone instructions within an `instruct` block.
 
-**Eight Generic Opcodes are exposed to Arxil programs**, listed below.
+**Ten Generic Opcodes are exposed to Arxil programs**, listed below.
 
-> **Note**: The opcodes `wait`, `sgnl`, `yiel`, and `warn` do not perform computation directly. Instead, they serve as *system calls* to the underlying runtime (ArxilVM/EDSOS), whose precise behavior may be platform-dependent but must conform to the abstract semantics defined here.
+> **Note**: The opcodes `wait`, `sgnl`, `yiel`, `emit`, `obsv` and `warn` do not perform computation directly. Instead, they serve as *system calls* to the underlying runtime (ArxilVM/EDSOS), whose precise behavior may be platform-dependent but must conform to the abstract semantics defined here.
 
 #### A.2.1 `exec` — Execute a Logical Contract
 
@@ -684,7 +707,7 @@ All Generic Opcodes appear as standalone instructions within an `instruct` block
 
 - Syntax
 ```ebnf
-ExecDecl = "exec", "(", "(", [ParamList], ")", "(", [RetList], ")", ")", FnName, ";" ;
+ExecDecl  = "exec", "(", "(", [ParamList], ")", "(", [RetList], ")", ")", FnName, ";" ;
 ParamList = Field, { ",", Field } ;
 RetList   = Field, { ",", Field } ;
 Field     = IDENT | "(" IDENT ")" ;
@@ -710,12 +733,14 @@ exec ((a, b)) ((sum)) Adder;
 - Syntax
 ```ebnf
 CondDecl = "cond", "(", Flag, ")", "(", { Branch }, ")", ";" ;
-Flag        = IDENT ;
-Branch = "(", { OrdnInst | ExecDecl }, ")" ;
+Flag     = IDENT ;
+Branch   = "(", { OrdnInst | ExecDecl }, ")" ;
 ```
 
 - Semantics
   - The `Flag` must name a field of Integer type in the current node’s data section, and its value should not bigger than the number of the following ways.
+
+- Constraints
   - All `Branch` must be statically resolvable (no computed gotos).
 
 - Example
@@ -730,7 +755,7 @@ cond (ready) ((exec ((a, b) (c, d)) process;) (exec ((a, e) (c, d)) retry;));
 
 - Syntax
 ```ebnf
-CyclDecl = "cycl", "(", DoneFlag, ")", "(", StepAction, ")", ";" ;
+CyclDecl   = "cycl", "(", DoneFlag, ")", "(", StepAction, ")", ";" ;
 DoneFlag   = IDENT ;
 (* Note: Flag should contain an BOOLEAN *)
 StepAction = OrdnInst | ExecDecl ;
@@ -748,7 +773,57 @@ cycl (loop_done) (exec ((prm, buf) (a, loop_done)) loop_body;);
 
 ---
 
-#### A.2.4 `wait` — Block Until Signaled
+#### A.2.4 `emit` — Emit a Named Causal Commitment
+
+- Effect
+  - Declares the completion of a logical phase by emitting a named label.
+
+- Syntax
+```ebnf
+EmitDecl = "emit", "(", LabelList, ")", ";" ;
+NodeList = Label, { ",", Label } ;
+Label    = "`", STRING, "`" ;
+```
+
+- Semantics
+  - Corresponds to the same-name opcode in Observation-Triggered Causality (OTC).
+
+- Constraints
+  - All of the `Label` must be declared in `causal` block in `meta_data`.
+
+- Example
+```axl
+emit ("Lib init is ready.");
+```
+
+---
+
+#### A.2.5 `obsv` — Declare a Causal Readiness Constraint
+
+- Effect
+  - Declares that the node’s subsequent execution is contingent upon observing a specific label emitted by an ancestor.
+
+- Syntax
+```ebnf
+ObsvDecl = "obsv", "(", LabelList, ")", ";" ;
+NodeList = Label, { ",", Label } ;
+Label    = "`", STRING, "`" ;
+```
+
+- Semantics
+  - Corresponds to the same-name opcode in Observation-Triggered Causality (OTC).
+
+- Constraints
+  - All of the `Label` must be declared in `causal` block in `meta_data`.
+
+- Example
+```axl
+obsv ("Lib init is ready.");
+```
+
+---
+
+#### A.2.6 `wait` — Block Until Signaled
 
 - Effect
   - Suspends the current node by transitioning it to the `blocked` state. Execution resumes only after a corresponding `sgnl`.
@@ -777,7 +852,7 @@ wait (input_ready) ();
 
 ---
 
-#### A.2.5 `sgnl` — Signal a Blocked Node
+#### A.2.7 `sgnl` — Signal a Blocked Node
 
 - Effect
   - Wakes up one or more nodes waiting on the specified event name, transitioning them from `blocked` to `ready`.
@@ -802,7 +877,7 @@ sgnl (input_ready) ();
 
 ---
 
-#### A.2.6 `yiel` — Voluntary Yield
+#### A.2.8 `yiel` — Voluntary Yield
 
 - Effect
   - Temporarily pauses the current node and returns it to the `ready` state, allowing other nodes to run.
@@ -825,7 +900,7 @@ yiel (cooperative);
 
 ---
 
-#### A.2.7 `fnsh` — Terminate Node
+#### A.2.9 `fnsh` — Terminate Node
 
 - Effect
   - Marks the current node as `finished`, ending its execution permanently.
@@ -848,7 +923,7 @@ fnsh;
 
 ---
 
-#### A.2.8 `warn` — Emit Diagnostic Warning
+#### A.2.10 `warn` — Emit Diagnostic Warning
 
 - Effect
   - Places the specified nodes into the `error` state and logs a diagnostic warning.

@@ -7,7 +7,7 @@
 
 ## Abstract
 
-The Arbor Strux (AS) computational model redefines computation as the structural evolution of a dynamic tree of nodes, where time is not a global parameter but a partial order of causally related events. Within this framework, traditional synchronization primitives—rooted in shared memory and linear time—are ill-suited. This document introduces **Observation-Triggered Causality **(OTC), a minimal, native mechanism for expressing cross-node behavioral dependencies in AS. OTC enables a descendant node to declare that its execution is contingent upon having *observed* a specific event emitted by an ancestor. We formalize OTC as an extension to the AS causal semantics, demonstrate its deep correspondence with—and principled refinement of—release/acquire memory ordering from classical concurrent programming, and specify its realization in the Arxil language through the dual opcodes `emit` and `obsv`. Crucially, OTC incurs near-zero runtime overhead, preserves AS’s structural safety guarantees, and aligns with its philosophy: *structure is semantics, observation is time*.
+The Arbor Strux (AS) computational model redefines computation as the structural evolution of a dynamic tree of nodes, where time is not a global parameter but a partial order of causally related events. Within this framework, traditional synchronization primitives—rooted in shared memory and linear time—are ill-suited. This document introduces **Observation-Triggered Causality**(OTC), a minimal, native mechanism for expressing cross-node behavioral dependencies in AS. OTC enables a descendant node to declare that its execution is contingent upon having *observed* a specific event emitted by an ancestor. We formalize OTC as an extension to the AS causal semantics, demonstrate its deep correspondence with—and principled refinement of—release/acquire memory ordering from classical concurrent programming, and specify its realization in the Arxil language through the dual opcodes `emit` and `obsv`. Crucially, OTC incurs near-zero runtime overhead, preserves AS’s structural safety guarantees, and aligns with its philosophy: *structure is semantics, observation is time*.
 
 ---
 
@@ -41,33 +41,33 @@ We model the AS execution space as a discrete manifold:
 \mathcal{M} = (\mathcal{T}, \mathcal{F}, \prec)
 \]
 where:
-- \(\mathcal{T}\) is the tree of nodes with ancestor relation \(\mathcal{A}(n)\),
-- \(\mathcal{F}\) is the field environment (values + binding chains),
-- \(\prec\) is the causal partial order over events.
+- $\mathcal{T}$ is the tree of nodes with ancestor relation $\mathcal{A}(n)$,
+- $\mathcal{F}$ is the field environment (values + binding chains),
+- $\prec$ is the causal partial order over events.
 
-An event \(e\) is an atomic state transition (e.g., instruction execution). A node \(n\) at event \(e\) observes only the projection of \(\mathcal{M}\) onto \(\{ e' \mid e' \prec e \}\).
+An event $e$ is an atomic state transition (e.g., instruction execution). A node $n$ at event $e$ observes only the projection of $\mathcal{M}$ onto $\{ e' \mid e' \prec e \}$.
 
 ### 2.2 OTC as a Causal Extension Rule
 
 We extend the AS operational semantics with a new inference rule:
 
 > **(Rule OTC)**  
-> Let \(c\) be a node containing an `obsv(L)` instruction at program counter \(pc\), and let \(a \in \mathcal{A}(c)\).  
-> If an event \(e_a = \texttt{emit}(a, L)\) occurs, then a causal edge is established:
+> Let $c$ be a node containing an `obsv(L)` instruction at program counter $pc$, and let $a \in \mathcal{A}(c)$.  
+> If an event $e_a = \texttt{emit}(a, L)$ occurs, then a causal edge is established:
 > \[
 > e_a \prec e_c^{\text{next}}
 > \]
-> where \(e_c^{\text{next}}\) is the first executable event in \(c\) following `obsv(L)`.
+> where $e_c^{\text{next}}$ is the first executable event in $c$ following `obsv(L)`.
 
 This rule is well-formed: it respects tree topology (WF1–WF3), does not introduce cycles (edges flow ancestor → descendant), and does not interfere with field binding (WF4).
 
-### 2.3 Event Coordinates in \(\mathcal{M}\)
+### 2.3 Event Coordinates in $\mathcal{M}$
 
 An OTC dependency involves two events with distinct coordinates:
-- **Emit event**: \((a, t_a, L)\) — spatial location \(a\), temporal coordinate \(t_a\), labeled \(L\)
-- **Observe constraint**: \((c, \bot, L)\) — spatial location \(c\), temporal coordinate deferred until \(L\) is observed
+- **Emit event**: $(a, t_a, L)$ — spatial location $a$, temporal coordinate $t_a$, labeled $L$
+- **Observe constraint**: $(c, \bot, L)$ — spatial location $c$, temporal coordinate deferred until $L$ is observed
 
-The label \(L\) serves as a **lightweight causal channel** embedded in the spacetime fabric of \(\mathcal{M}\).
+The label $L$ serves as a **lightweight causal channel** embedded in the spacetime fabric of $\mathcal{M}$.
 
 ---
 
@@ -81,9 +81,9 @@ OTC is the structural analog of C++’s `memory_order_release` / `memory_order_a
 |--------|---------------------|----------------------------|
 | Synchronization point | Atomic store with `release` | `emit(L)` |
 | Observation point | Atomic load with `acquire` | `obsv(L)` |
-| Shared signal | Global atomic variable (e.g., `flag`) | Label \(L\) (pure metadata) |
+| Shared signal | Global atomic variable (e.g., `flag`) | Label $L$ (pure metadata) |
 | Visibility guarantee | All writes before `release` visible after `acquire` | All state stabilized before `emit` is safely observable after `obsv` |
-| Scope | Global address space | Ancestor chain \(\mathcal{A}(c)\) |
+| Scope | Global address space | Ancestor chain $\mathcal{A}(c)$ |
 
 Both establish a *synchronizes-with* relationship that induces a happens-before edge.
 
@@ -108,11 +108,11 @@ Thus, OTC is not merely an adaptation but a **refinement**—a higher-level abst
 We ask: *What is the smallest unit of information sufficient to convey “a specific behavior in a specific ancestor has completed”?*
 
 Given the constraints of AS:
-- Observability is limited to \(\mathcal{A}(c)\),
+- Observability is limited to $\mathcal{A}(c)$,
 - The ancestor chain is ordered and duplicate-free (by WF3),
 - Node types provide static context,
 
-we conclude that **a single string label \(L\) is information-theoretically minimal**. It provides:
+we conclude that **a single string label $L$ is information-theoretically minimal**. It provides:
 - **Behavioral disambiguation** within a node (e.g., `"init"` vs `"finalize"`),
 - **Contextual resolution** across ancestors via type-aware lookup.
 
@@ -150,10 +150,10 @@ These appear within `instruct` blocks like any other opcode.
 ### 5.2 Semantic Specification
 
 - **`emit(L)`**:  
-  Records that label \(L\) has been emitted by the current node. Triggers a lightweight notification to all descendants with pending `obsv(L)`.
+  Records that label $L$ has been emitted by the current node. Triggers a lightweight notification to all descendants with pending `obsv(L)`.
 
 - **`obsv(L)`**:  
-  Does not execute as a traditional instruction. Instead, it registers a causal readiness constraint: the node’s program counter advances only after some ancestor emits \(L\). No state change (e.g., `blocked`) is introduced; the node simply remains unscheduled.
+  Does not execute as a traditional instruction. Instead, it registers a causal readiness constraint: the node’s program counter advances only after some ancestor emits $L$. No state change (e.g., `blocked`) is introduced; the node simply remains unscheduled.
 
 ### 5.3 Placement in Arxil Opcode Taxonomy
 
@@ -173,14 +173,14 @@ The pair forms a **dual**: one *announces*, the other *conditions on announcemen
 
 ### 6.1 Node State Extension
 
-Each node’s runtime state \(\sigma(n)\) is extended with:
-- \(\mathcal{E}_{\text{emit}} \subseteq \mathcal{L}\): set of emitted labels,
-- \(\mathcal{P}_{\text{obsv}} \subseteq \mathcal{L} \times \mathbb{N}^+\): pending (label, PC) pairs.
+Each node’s runtime state $\sigma(n)$ is extended with:
+- $\mathcal{E}_{\text{emit}} \subseteq \mathcal{L}$: set of emitted labels,
+- $\mathcal{P}_{\text{obsv}} \subseteq \mathcal{L} \times \mathbb{N}^+$: pending (label, PC) pairs.
 
 ### 6.2 Scheduler Integration
 
-- On `emit(L)`: scheduler propagates \(L\) down the subtree, resolving pending `obsv`.
-- On `obsv(L)`: if \(L\) is not yet observed in \(\mathcal{A}(c)\), the node is marked *causally unready* and skipped during scheduling.
+- On `emit(L)`: scheduler propagates $L$ down the subtree, resolving pending `obsv`.
+- On `obsv(L)`: if $L$ is not yet observed in $\mathcal{A}(c)$, the node is marked *causally unready* and skipped during scheduling.
 
 ### 6.3 Static Verification
 
@@ -205,7 +205,7 @@ It embodies the AS ethos: computation is not about commanding time, but about de
 
 ## References
 
-1. *Arbor Strux Computational Model*, v2.1, 2024.  
+1. *Arbor Strux Computational Model*, v2.1, 2025.  
 2. *Arxil Language Specification*, v0.2.0, 2025.  
 3. ISO/IEC 14882:2020, *Programming Languages — C++*.  
 4. Adve, S. V., & Gharachorloo, K. (1996). *Shared Memory Consistency Models: A Tutorial*. IEEE Computer.
