@@ -1,6 +1,8 @@
 # Arxil Language Formal Semantics and Verification
 
-> Arxil 语言形式语义与验证
+---
+
+> v0.1.1
 
 ---
 
@@ -23,7 +25,7 @@ $$
 
 $\text{Resolve}$ 是一个偏函数，目标是将字段引用 $(n, f)$ 解析到其最终的物理存储位置 $(m, f_{\text{publ}})$，其中 $f_{\text{publ}} \in \text{dom}(\mathcal{D}_{\text{publ}}^m)$。
 
-**定义**：给定良构 TS 树 $\mathcal{T}$ 和节点 $n \in \mathcal{T}$，对任意字段名 $f$：
+**定义**：给定良构 AS 树 $\mathcal{T}$ 和节点 $n \in \mathcal{T}$，对任意字段名 $f$：
 
 - **[R1 - 本地字段]**  
   若 $f \in \text{dom}(\mathcal{D}_{\text{priv}}^n) \cup \text{dom}(\mathcal{D}_{\text{publ}}^n)$，则  
@@ -47,13 +49,13 @@ $\text{Resolve}$ 是一个偏函数，目标是将字段引用 $(n, f)$ 解析�
 
 ## 3. 绑定操作的形式语义
 
-为保证 $\text{Resolve}$ 行为符合预期，需精确定义 `Push` 与 `Lift` 对 `BindingRef` 的操作。
+为保证 $\text{Resolve}$ 行为符合预期，需精确定义 `psh` 与 `lft` 对 `BindingRef` 的操作。
 
-### `Push` 操作的扩展语义
+### `psh` 操作的扩展语义
 
 当执行  
 ```axl
-push child (ChildType () (parent_field => child_field) ...)
+push child (NodeTemplate () (parent_field => child_field) ...)
 ```  
 在创建子节点 $c$ 后，必须执行：
 
@@ -61,15 +63,15 @@ $$
 c.\mathcal{D}_{\text{ance}}(child\_field) := \texttt{Bound}(n, parent\_field)
 $$
 
-其中 $n$ 是执行 `push` 的父节点。此操作建立初始绑定链，无论 $n.\mathcal{D}_{\text{ance}}(parent\_field)$ 当前是否已绑定。
+其中 $n$ 是执行 `psh` 的父节点。此操作建立初始绑定链，无论 $n.\mathcal{D}_{\text{ance}}(parent\_field)$ 当前是否已绑定。
 
 ---
 
-### `Lift` 操作的扩展语义
+### `lft` 操作的扩展语义
 
 当执行  
 ```axl
-lift data_source ((source_field => local_ance_field))
+lift external_node ((source_field => local_ance_field))
 ```  
 必须满足：
 - $\texttt{data\_source} \in \text{DirectChildren}(n)$
@@ -92,9 +94,9 @@ $$
 
 ### **终止性（Termination）**
 
-> 对任何良构 TS 树 $\mathcal{T}$ 和节点 $n \in \mathcal{T}$，$\text{Resolve}(n, f)$ 要么在有限步内返回 $(m, f_{\text{publ}})$，要么返回 $\bot$。
+> 对任何良构 AS 树 $\mathcal{T}$ 和节点 $n \in \mathcal{T}$，$\text{Resolve}(n, f)$ 要么在有限步内返回 $(m, f_{\text{publ}})$，要么返回 $\bot$。
 
-**证明思路**：TS 树本身无环，且 `Push`/`Lift` 建立的绑定关系严格遵循父子方向（从子到父，或从父到子的 `publ`），由 `BindingRef` 构成的依赖图亦无环，故递归调用必终止。
+**证明思路**：AS 树本身无环，且 `psh`/`lft` 建立的绑定关系严格遵循父子方向（从子到父，或从父到子的 `publ`），由 `BindingRef` 构成的依赖图亦无环，故递归调用必终止。
 
 ---
 

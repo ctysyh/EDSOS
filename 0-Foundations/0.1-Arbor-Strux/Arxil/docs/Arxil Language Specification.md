@@ -45,7 +45,7 @@
   - [5. Design Rationale and Usage Patterns *(Informative)*](#5-design-rationale-and-usage-patterns-informative)
     - [5.1 Philosophy Recap: Syntax Freedom, Semantic Closure](#51-philosophy-recap-syntax-freedom-semantic-closure)
     - [5.2 The `fn` as a Logical Contract, Not a Function Call](#52-the-fn-as-a-logical-contract-not-a-function-call)
-    - [5.3 Structured Sharing with `ance`: The CTRN Pattern](#53-structured-sharing-with-ance-the-ctrn-pattern)
+    - [5.3 Structured Sharing with `ance`: The CARN Pattern](#53-structured-sharing-with-ance-the-carn-pattern)
     - [5.4 Integrating Legacy Code via `'lang'` Blocks and `.arxtype` Wrappers](#54-integrating-legacy-code-via-lang-blocks-and-arxtype-wrappers)
 - [Appendix](#appendix)
   - [A. About Arxil opcodes](#a-about-arxil-opcodes)
@@ -64,7 +64,8 @@
       - [A.2.8 `yiel` — Voluntary Yield](#a28-yiel--voluntary-yield)
       - [A.2.9 `fnsh` — Terminate Node](#a29-fnsh--terminate-node)
       - [A.2.10 `warn` — Emit Diagnostic Warning](#a210-warn--emit-diagnostic-warning)
-      - [Summary Table](#summary-table)
+      - [A.2.11 `gerf` — Get Reference](#a211-gerf--get-reference)
+      - [A.2.12 `derf` — Dereference](#a212-derf--dereference)
     - [A.3 Structural Opcodes](#a3-structural-opcodes)
       - [A.3.1 `psh` — Push a New Child Node](#a31-psh--push-a-new-child-node)
       - [A.3.2 `pop` — Remove a Child Node](#a32-pop--remove-a-child-node)
@@ -164,7 +165,7 @@ instruct, inst, fn, inst_scri, reserve, resv,
 type, size, layout, ops, interop, validators, docs, hints,
 psh, pop, lft, mrg, dtc,
 actv, sgnl, wait, yiel, fnsh, warn,
-exec, cond, cycl,
+exec, cond, cycl, gerf, derf,
 native, asm, libcall,
 this,
 true, false
@@ -334,14 +335,15 @@ OpCode = IDENT ;
 OperTarg = "(", Operand, { Operand }, ")" ;
 OperGoal = "(", Operand, { Operand }, ")" ;
 
-Operand = "(" IDENT ")" ;
+Operand = "(" FieldRef ")";
+FieldRef = IDENT | "derf" "(" IDENT ")";
 ```
 
 Operands refer to field names declared in the node’s `data` section. Parentheses around an identifier in an operand (e.g., `(x)`) are **ALWAYS** required.
 
 *   **Ordinary Opcodes**: Opcodes like `add`, `mul`, `and`, and `cpy` are Ordinary Opcodes. Their legality and precise runtime behavior are **entirely determined by the types of their operands in the scope of the data type of the `OperTarg`**. The compiler consults the `.arxtype` definitions to verify that the requested operation is supported (i.e., listed in the type's `ops` set) and to generate the correct low-level code. Arxil specifies 12 *recommended* Ordinary Opcodes, along with best practice guidelines for any custom Ordinary Opcodes, as detailed in Appendix A.1.
 
-*   **Generic Opcodes**: Some operators are part of Arxil's reserved language operators, including `exec`, `cond` and `cycl`. They have special meanings and formats, falling under the exceptional cases difined here, as detailed in Appendix A.2.
+*   **Generic Opcodes**: Some operators are part of Arxil's reserved language operators, including `exec`, `cond`, `cycl` and so on. They have special meanings and formats, falling under the exceptional cases difined here, as detailed in Appendix A.2. Expression `derf` is also as detailed there.
 
 *   **Structural Opcodes**: Certain opcodes directly correspond to atomic operations on the AS tree structure itself. Their static and dynamic semantics are tightly coupled to the AS Computational Model. A complete list of these opcodes is provided in Appendix A.3.
 
@@ -541,15 +543,15 @@ This design enables:
 
 > **Best Practice**: Use `fn` to encapsulate reusable logic that operates on well-defined input/output contracts. Avoid treating it like a traditional subroutine with side effects beyond its declared interface.
 
-### 5.3 Structured Sharing with `ance`: The CTRN Pattern
+### 5.3 Structured Sharing with `ance`: The CARN Pattern
 
 The `ance` field category is central to Arxil’s approach to safe, zero-copy data sharing. Unlike pointers or global variables, `ance` fields declare *intent* without assuming implementation—they are promises to be fulfilled later via structural operations.
 
-A canonical pattern is the **Cross Arbor Strux Reference Node (CTRN)**:
+A canonical pattern is the **Cross Arbor Strux Reference Node (CARN)**:
 
-1. A dedicated node (e.g., `buffer_ctrn`) is created with only `publ` fields:
+1. A dedicated node (e.g., `buffer_carn`) is created with only `publ` fields:
    ```axl
-   node buffer_ctrn {
+   node buffer_carn {
        data { publ { u8[4096] payload; } }
    }
    ```
@@ -710,7 +712,7 @@ All Generic Opcodes appear as standalone instructions within an `instruct` block
 ExecDecl  = "exec", "(", "(", [ParamList], ")", "(", [RetList], ")", ")", FnName, ";" ;
 ParamList = Field, { ",", Field } ;
 RetList   = Field, { ",", Field } ;
-Field     = IDENT | "(" IDENT ")" ;
+Field     = Operand | "(" Operand ")" ;
 FnName    = IDENT | "(" IDENT ")" ;
 ```
 
@@ -733,12 +735,12 @@ exec ((a, b)) ((sum)) Adder;
 - Syntax
 ```ebnf
 CondDecl = "cond", "(", Flag, ")", "(", { Branch }, ")", ";" ;
-Flag     = IDENT ;
+Flag     = Operand ;
 Branch   = "(", { OrdnInst | ExecDecl }, ")" ;
 ```
 
 - Semantics
-  - The `Flag` must name a field of Integer type in the current node’s data section, and its value should not bigger than the number of the following ways.
+  - The `Flag` must refer to a field of Integer type in the current node’s data section, and its value should not bigger than the number of the following ways.
 
 - Constraints
   - All `Branch` must be statically resolvable (no computed gotos).
@@ -756,7 +758,7 @@ cond (ready) ((exec ((a, b) (c, d)) process;) (exec ((a, e) (c, d)) retry;));
 - Syntax
 ```ebnf
 CyclDecl   = "cycl", "(", DoneFlag, ")", "(", StepAction, ")", ";" ;
-DoneFlag   = IDENT ;
+DoneFlag   = Operand ;
 (* Note: Flag should contain an BOOLEAN *)
 StepAction = OrdnInst | ExecDecl ;
 ```
@@ -787,6 +789,7 @@ Label    = "`", STRING, "`" ;
 
 - Semantics
   - Corresponds to the same-name opcode in Observation-Triggered Causality (OTC).
+  - Records that the current node has committed to the event identified by `"label"`, and notifies all descendant nodes with pending observations for this label.
 
 - Constraints
   - All of the `Label` must be declared in `causal` block in `meta_data`.
@@ -812,6 +815,7 @@ Label    = "`", STRING, "`" ;
 
 - Semantics
   - Corresponds to the same-name opcode in Observation-Triggered Causality (OTC).
+  - The node’s program counter will not advance beyond this point until some ancestor in its binding chain has emitted label that the node caring about.
 
 - Constraints
   - All of the `Label` must be declared in `causal` block in `meta_data`.
@@ -830,7 +834,7 @@ obsv ("Lib init is ready.");
 
 - Syntax
 ```ebnf
-WaitDecl = "wait", "(", WaitSemaphore, ")", "(", [Options], ")", ";" ;
+WaitDecl = "wait", "(", WaitSemaphore, { ",", WaitSemaphore }, ")", "(", [Options], ")", ";" ;
 WaitSemaphore = IDENT ;
 Options   = IDENT ;
 ```
@@ -953,18 +957,51 @@ warn (worker1, worker2, this);
 
 ---
 
-#### Summary Table
+#### A.2.11 `gerf` — Get Reference
 
-| Opcode | Syntax Form                     | Category       | State Change               | Scheduler Interaction |
-|--------|----------------------------------|----------------|----------------------------|------------------------|
-| `exec` | `exec ((p)) ((r)) fn;`         | Control Flow   | None                       | No                     |
-| `cond` | `cond (f) ((t)) ((e));`          | Control Flow   | None                       | No                     |
-| `cycl` | `cycl (done) (step);`            | Control Flow   | None                       | No                     |
-| `wait` | `wait (eve) (opt);`                    | System Call    | → `blocked`                | Yes                    |
-| `sgnl` | `sgnl (eve) (opt);`                    | System Call    | `blocked` → `ready` (target) | Yes                    |
-| `yiel` | `yiel (opt);`                    | System Call    | → `ready` (self, paused)   | Yes                    |
-| `fnsh` | `fnsh;`                          | Termination    | → `finished`               | Yes                    |
-| `warn` | `warn (n1, n2, ...);`            | Diagnostics    | → `error` (specified nodes)| Yes                    |
+- Effect
+  - Get reference of a field as pointer value.
+
+- Syntax
+```ebnf
+GerfDecl = "gerf", "(", pointer_field, ")", "(", goal_field, ")", ";" ;
+pointer_field | goal_field = Operand ;
+```
+
+- Semantics
+  - <TODO>
+
+- Constraints
+  - <TODO>
+
+- Example
+```axl
+gerf (buffer_ptr) (buffer);
+```
+
+---
+
+#### A.2.12 `derf` — Dereference
+
+- Effect
+  - Dereference a pointer field as a new virtual value field.
+
+- Syntax
+```ebnf
+DerfExpr = "derf", "(", pointer_field, ")" ;
+pointer_field = Operand ;
+```
+
+- Semantics
+  - <TODO>
+
+- Constraints
+  - <TODO>
+
+- Example
+```axl
+cpy (derf(buffer_ptr)) (goal_value_field);
+```
 
 ---
 
