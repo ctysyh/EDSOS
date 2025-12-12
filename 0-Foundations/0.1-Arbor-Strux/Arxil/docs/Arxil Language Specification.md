@@ -261,7 +261,7 @@ CausalDecl = "causal", "{", { CausalList }, "}" ;
 
 CausalList = ("emits" | "obses"), "{", CausalLabel, { ",", CausalLabel }, "}" ;
 
-CausalLabel = "`", STRING, "`" ;
+CausalLabel = STRING ;
 ```
 
 ### 3.4 Data Section
@@ -784,7 +784,7 @@ cycl (loop_done) (exec ((prm, buf) (a, loop_done)) loop_body;);
 ```ebnf
 EmitDecl = "emit", "(", LabelList, ")", ";" ;
 NodeList = Label, { ",", Label } ;
-Label    = "`", STRING, "`" ;
+Label    = STRING ;
 ```
 
 - Semantics
@@ -810,7 +810,7 @@ emit ("Lib init is ready.");
 ```ebnf
 ObsvDecl = "obsv", "(", LabelList, ")", ";" ;
 NodeList = Label, { ",", Label } ;
-Label    = "`", STRING, "`" ;
+Label    = STRING ;
 ```
 
 - Semantics
