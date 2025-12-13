@@ -1,3 +1,8 @@
+<!--
+SPDX-FileCopyrightText: © 2025 Bib Guake
+SPDX-License-Identifier: CC-BY-4.0
+-->
+
 # AS Formal Semantics and Verification
 
 ---

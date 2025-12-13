@@ -1,3 +1,8 @@
+<!--
+SPDX-FileCopyrightText: © 2025 Bib Guake
+SPDX-License-Identifier: Apache-2.0
+-->
+
 # Arxil Type Specification
 
 ---

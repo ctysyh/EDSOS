@@ -1,3 +1,6 @@
+SPDX-FileCopyrightText: © 2025 Bib Guake
+SPDX-License-Identifier: LGPL-3.0-or-later
+
 Documents for EDSOS (Explicit Distributed Single Operating System)
 
 0 Foundations
@@ -12,11 +15,7 @@ Documents for EDSOS (Explicit Distributed Single Operating System)
 1.4 Failure-and-Recovery
 
 2 DPU-Spec
-2.1 Hardware-Architecture
-2.2 Logicallogistic-Core
-2.3 Port-and-SerDes
-2.4 Onboard-Cache
-2.5 Extention
+
 
 3 System-Service
 3.1 I/O-System
