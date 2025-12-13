@@ -1,4 +1,5 @@
-drafts/*
-2-DPU-Spec/*
+drafts/
+docs/2-DPU-Spec/*
+DDR-DPU/
 .env
 .env.*
