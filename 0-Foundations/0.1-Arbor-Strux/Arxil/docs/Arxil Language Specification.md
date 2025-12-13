@@ -2,7 +2,7 @@
 
 ---
 
-> v0.2.1
+> v0.2.2
 
 ---
 
@@ -47,8 +47,7 @@
     - [5.2 The `fn` as a Logical Contract, Not a Function Call](#52-the-fn-as-a-logical-contract-not-a-function-call)
     - [5.3 Structured Sharing with `ance`: The CARN Pattern](#53-structured-sharing-with-ance-the-carn-pattern)
     - [5.4 Integrating Legacy Code via `'lang'` Blocks and `.arxtype` Wrappers](#54-integrating-legacy-code-via-lang-blocks-and-arxtype-wrappers)
-- [Appendix](#appendix)
-  - [A. About Arxil opcodes](#a-about-arxil-opcodes)
+  - [Appendix A. About Arxil opcodes](#appendix-a-about-arxil-opcodes)
     - [A.1 Ordinary Opcodes](#a1-ordinary-opcodes)
       - [A.1.1 Mandatory Specification Requirements](#a11-mandatory-specification-requirements)
       - [A.1.2 Recommended Best Practices](#a12-recommended-best-practices)
@@ -474,7 +473,7 @@ interop {
     pointer_type = ptr_i32;
 }
 ```
-The existence of `ptr_i32` (itself a type with its own `.arxtype` definition) enables the use of the address-of operator (`&`) on fields of type `i32` and allows opcodes like `set` and `get` to operate on values of type `ptr_i32`.
+The existence of `ptr_i32` (itself a type with its own `.arxtype` definition) enables the use of the address-of opcode (`gerf`) on fields of type `i32` and allows opcodes like `set` and `get` to operate on values of type `ptr_i32`. Generic Opcode `gerf` is as detailed in Appendix A.2.11.
 
 #### 4.4.2 Pointer Arithmetic Rules
 Pointer arithmetic (e.g., `p + k`) is permitted if the pointer's underlying `.arxtype` defines the necessary operations (`add`, `sub`) in its `ops` block and includes the `pointer_arithmetic` property. The semantics of the arithmetic—specifically, whether the integer offset `k` is scaled by the size of the pointed-to type—are defined by this property.
@@ -498,6 +497,8 @@ Dereferencing a pointer follows a strict two-phase resolution process to maintai
 2.  **Remote Binding Resolution**: If the located field is an `ance` field, the standard binding resolution protocol is invoked to find its ultimate physical storage location in a `publ` field of another node.
 
 This formal process guarantees that every valid pointer dereference ultimately accesses a well-defined, writable memory location. The complete formal definition of this process is provided in the **Arxil Language Formal Semantics and Verification** document under the section "Pointer Value Resolution: `Deref(p)`".
+
+Ultimately, the dereference operation correctly returns the memory location of the final, physical field. In the Arxil source code, this dereference semantics is specifically carried by Generic Opcode `derf`, as detailed in Appendix A.2.12. Each dereferencing access to the pointer field must explicitly trigger this two-stage parsing process through the derf instruction.
 
 ---
 
@@ -605,9 +606,7 @@ This approach allows gradual migration: legacy code runs unchanged inside a “A
 
 ---
 
-# Appendix
-
-## A. About Arxil opcodes
+## Appendix A. About Arxil opcodes
 
 ### A.1 Ordinary Opcodes
 

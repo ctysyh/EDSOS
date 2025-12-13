@@ -1,7 +1,51 @@
 # AS Formal Semantics and Verification
 
-> Formal Semantics of Arbor Strux: A Causal Arbor Network Model
+---
+
 > v0.2.1
+
+---
+
+- [AS Formal Semantics and Verification](#as-formal-semantics-and-verification)
+  - [1. Introduction](#1-introduction)
+  - [2. Basic Domains](#2-basic-domains)
+  - [3. Local Node State (Spatial Coordinates + Computational Context)](#3-local-node-state-spatial-coordinates--computational-context)
+  - [4. Global Configuration (No Global Time)](#4-global-configuration-no-global-time)
+  - [5. Well-Formedness Constraints (Structural Invariants)](#5-well-formedness-constraints-structural-invariants)
+    - [(WF1) Ancestor Consistency](#wf1-ancestor-consistency)
+    - [(WF2) Child Closure](#wf2-child-closure)
+    - [(WF3) Unique Parent \& Acyclicity](#wf3-unique-parent--acyclicity)
+    - [(WF4) Binding Graph DAG Property](#wf4-binding-graph-dag-property)
+  - [6. Field Resolution and State Function](#6-field-resolution-and-state-function)
+    - [Definition 6.1 (Resolve)](#definition-61-resolve)
+    - [Definition 6.2 (State Function)](#definition-62-state-function)
+  - [7. Events and Causal Evolution (Temporal Dimension)](#7-events-and-causal-evolution-temporal-dimension)
+    - [7.1 Events](#71-events)
+    - [7.2 Causal Partial Order ($\\prec$)](#72-causal-partial-order-prec)
+    - [7.3 Execution Semantics](#73-execution-semantics)
+    - [7.4 Transient Zombie Axiom and State Dynamics](#74-transient-zombie-axiom-and-state-dynamics)
+      - [Classification of Execution States](#classification-of-execution-states)
+  - [8. Relativistic Observation (Distributed Perspective)](#8-relativistic-observation-distributed-perspective)
+  - [9. Key Properties](#9-key-properties)
+    - [Theorem 1 (Well-Formedness Preservation)](#theorem-1-well-formedness-preservation)
+    - [Theorem 2 (Termination of Resolution)](#theorem-2-termination-of-resolution)
+    - [Theorem 3 (Unique Physical Source)](#theorem-3-unique-physical-source)
+    - [Theorem 4 (Turing Completeness)](#theorem-4-turing-completeness)
+  - [10. Geometric Interpretation](#10-geometric-interpretation)
+  - [11. Read and Write Permission Light Cone](#11-read-and-write-permission-light-cone)
+    - [11.1 Motivation and Intuition](#111-motivation-and-intuition)
+    - [11.2 Extended Semantic Domains](#112-extended-semantic-domains)
+    - [11.3 Permission Consistency Constraints](#113-permission-consistency-constraints)
+    - [11.4 Geometric Interpretation: The Light Cone Model](#114-geometric-interpretation-the-light-cone-model)
+      - [Definition 11.1 (Depth Embedding)](#definition-111-depth-embedding)
+      - [Definition 11.2 (Field Embedding)](#definition-112-field-embedding)
+      - [Definition 11.3 (Binding Ray)](#definition-113-binding-ray)
+      - [Definition 11.4 (Permission Light Cone)](#definition-114-permission-light-cone)
+    - [11.5 Dynamic Evolution and Causal Enforcement](#115-dynamic-evolution-and-causal-enforcement)
+    - [11.6 Static Analysis via Cone Inspection](#116-static-analysis-via-cone-inspection)
+
+
+---
 
 ## 1. Introduction
 
@@ -26,6 +70,7 @@ We fix the following syntactic and semantic domains:
   $\mathsf{ExecStatus} = \{ \mathtt{ready},\ \mathtt{running},\ \mathtt{blocked},\ \mathtt{zombie},\ \mathtt{error} \}$.
 - **Instructions**: $\mathsf{Instr}$ — a set of atomic operations including  
   $\mathtt{push}$, $\mathtt{lift}$, $\mathtt{exec}$, $\mathtt{cond}$, $\mathtt{cycl}$, $\mathtt{finish}$, etc.
+  > These atomic operations are usually exposed as opcodes such as `psh` and `lft` in specific programming language interfaces (such as Arxil).
 - **Field names**: $\mathcal{F} = \mathcal{F}_{\text{priv}} \uplus \mathcal{F}_{\text{publ}} \uplus \mathcal{F}_{\text{ance}}$.
 - **Values**: $\mathcal{V}$ — a domain of base values (integers, booleans, etc.).
 - **Binding references**:  
