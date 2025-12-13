@@ -18,7 +18,7 @@ This project uses **different licenses for different parts**. Your contributions
 | Directory | License | Requirements |
 |----------|--------|--------------|
 | `Arxil/` | [Apache-2.0](LICENSES/Apache-2.0.txt) | Permissive; suitable for interpreters, Arxil specs, and libraries |
-| `src/` | [LGPL-3.0-or-later](LICENSES/LGPL-3.0-or-later.txt) | Requires derivative works to remain under LGPL unless dynamically linked |
+| `edsos/` | [LGPL-3.0-or-later](LICENSES/LGPL-3.0-or-later.txt) | Requires derivative works to remain under LGPL unless dynamically linked |
 | `docs/` (except `Foundations/`) | [LGPL-3.0-or-later](LICENSES/LGPL-3.0-or-later.txt) | Includes architecture docs, guides, and index files like `DOCUMENTS_FOR_EDSOS` |
 | `docs/Foundations/` | [CC-BY-4.0](LICENSES/CC-BY-4.0.txt) | Academic/theoretical content; attribution required |
 
