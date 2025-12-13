@@ -4,6 +4,10 @@ SPDX-License-Identifier: LGPL-3.0-or-later
 README
 
 [![status: early-development](https://img.shields.io/badge/status-early--development-yellow)](https://github.com/ctysyh/EDSOS)
+[![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![License: CC BY 4.0](https://img.shields.io/badge/License-CC--BY--4.0-lightgrey.svg)](https://creativecommons.org/licenses/by/4.0/)
+[![License: LGPL-3.0-or-later](https://img.shields.io/badge/License-LGPL--3.0--or--later-green.svg)](https://www.gnu.org/licenses/lgpl-3.0.html)
+
 
 EDSOS — Explicit Distributed Single Operating System.
 
