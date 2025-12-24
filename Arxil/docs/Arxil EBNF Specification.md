@@ -7,6 +7,10 @@ SPDX-License-Identifier: Apache-2.0
 
 ---
 
+> v0.2.1
+
+---
+
 - [Arxil EBNF Specification](#arxil-ebnf-specification)
   - [Top-Level Structure](#top-level-structure)
   - [.arxtype](#arxtype)
@@ -296,3 +300,7 @@ DIGIT       = "0".."9" ;
 ANY_CHAR_EXCEPT_CURLY_BRACE_NESTED = 
     (* Implementation-defined: typically raw string with brace balancing *)
 ```
+
+---
+
+*End of Spec Document.*
