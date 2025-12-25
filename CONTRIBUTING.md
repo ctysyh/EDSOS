@@ -18,9 +18,9 @@ This project uses **different licenses for different parts**. Your contributions
 | Directory | License | Requirements |
 |----------|--------|--------------|
 | `Arxil/` | [Apache-2.0](LICENSES/Apache-2.0.txt) | Permissive; suitable for interpreters, Arxil specs, and libraries |
-| `edsos/` | [LGPL-3.0-or-later](LICENSES/LGPL-3.0-or-later.txt) | Requires derivative works to remain under LGPL unless dynamically linked |
-| `docs/` (except `Foundations/`) | [LGPL-3.0-or-later](LICENSES/LGPL-3.0-or-later.txt) | Includes architecture docs, guides, and index files like `DOCUMENTS_FOR_EDSOS` |
-| `docs/Foundations/` | [CC-BY-4.0](LICENSES/CC-BY-4.0.txt) | Academic/theoretical content; attribution required |
+| `edsos/src/` | [LGPL-3.0-or-later](LICENSES/LGPL-3.0-or-later.txt) | Requires derivative works to remain under LGPL unless dynamically linked |
+| `edsos/docs/` | [LGPL-3.0-or-later](LICENSES/LGPL-3.0-or-later.txt) | Includes architecture docs, guides, and index files like `DOCUMENTS_FOR_EDSOS` |
+| `Arbor-Strux/` | [CC-BY-4.0](LICENSES/CC-BY-4.0.txt) | Academic/theoretical content; attribution required |
 
 ## 3. File Licensing (REUSE Compliance)
 
@@ -28,7 +28,7 @@ We follow the [REUSE specification](https://reuse.software/) to ensure clear lic
 
 ### Every new file must include an SPDX-License-Identifier
 
-- For **code files** (`.py`, `.c`, `.rs`, etc.):
+- For **code files** (`.axl`, `.py`, `.c`, `.rs`, etc.):
   ```python
   # SPDX-License-Identifier: Apache-2.0
   ```

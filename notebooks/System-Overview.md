@@ -3,7 +3,7 @@ SPDX-FileCopyrightText: © 2025 Bib Guake
 SPDX-License-Identifier: LGPL-3.0-or-later
 -->
 
-# 1.1 System Overview
+# System Overview
 
 ---
 
@@ -11,7 +11,7 @@ SPDX-License-Identifier: LGPL-3.0-or-later
 
 ---
 
-## 1.1.1 Motivation
+## 1 Motivation
 
 Modern computing is increasingly defined by heterogeneity and distribution: multi-core CPUs, accelerators (GPUs, NPUs), disaggregated memory, and networked compute nodes are now the norm rather than the exception. Yet mainstream operating systems remain rooted in abstractions designed for single-machine, homogeneous environments—processes, threads, and global virtual address spaces that obscure hardware reality behind layers of indirection.
 
@@ -23,7 +23,7 @@ This mismatch leads to fundamental limitations:
 
 EDSOS (Explicitly Distributed Single Operating System) addresses these challenges by embracing distribution as a first-class concern—not as an afterthought to be abstracted away, but as a core organizing principle. It does so through a unified theoretical foundation: the **Arbor Strux (AS) Model**.
 
-## 1.1.2 Core Principles
+## 2 Core Principles
 
 EDSOS is built upon five interlocking design principles:
 
@@ -39,7 +39,7 @@ EDSOS is built upon five interlocking design principles:
 4. **Unified Control and Data Flow**  
    Control flow (via structured jumps) and data flow (via field binding) are co-designed within the AS model. Control logic corresponds to variable fields, and variable fields similarly correspond to control logic; both are unified within nodes.
 
-## 1.1.3 Theoretical basis: Arbor Strux (AS) Model
+## 3 Theoretical basis: Arbor Strux (AS) Model
 
 At its core, EDSOS implements the **Arbor Strux (AS) Model**—a formal computational framework that redefines concurrency and distribution through causal, tree-structured state machines.
 
@@ -51,25 +51,25 @@ Key aspects of the AS model include:
 
 The AS model provides the mathematical foundation for EDSOS’s safety, liveness, and expressiveness guarantees.
 
-## 1.1.4 Language Interface: Arxil
+## 4 Language Interface: Arxil
 
 Arxil is EDSOS’s native intermediate language—designed as a **faithful syntactic encoding of the AS model**.
 
 Key characteristics:
-- Arxil source directly maps to AS operations (`psh`, `lift`, `exec`, `cond`), making it suitable as input to the EDSOS loader.
+- Arxil source directly maps to AS operations (`psh`, `lft`, `exec`, `cond`), making it suitable as input to the EDSOS loader.
 - Functions (`fn`) are logical contracts: parameters and returns act as binding slots, not stack frames. Execution proceeds in-place with no data copying.
 - Mixed-language interoperability is supported via `'lang'` blocks (e.g., `'c'`, `'rust'`), subject to a lowering contract that ensures only declared bindings are accessed.
 - Type information is externalized into `.arxtype` files, enabling rich compile-time semantics with zero runtime overhead.
 
 Arxil serves as the bridge between high-level developer intent and the structural execution model of EDSOS—much like C did for Unix, but grounded in formal semantics.
 
-## 1.1.5 EDSOS Architecture
+## 5 EDSOS Architecture
 
 EDSOS realizes the AS model through a novel system architecture composed of the following layers:
 
 ### Unified 128-bit Global Virtual Address Space (GVA)
 - All memory objects (nodes, buffers, devices) are named in a flat, 128-bit GVA space.
-- No central directory: name resolution is topology-adaptive and performed via distributed metadata (NSME) and Path Cache inside dedicated DPU.
+- No central directory: name resolution is topology-adaptive and performed via distributed metadata (Near-Storage Metadata, NSM) and Path Cache inside dedicated DPU.
 - Local Virtual Address (LVA) provides a 64-bit view compatible with existing CPU MMUs; LVA and GVA share identical offsets for pointer portability.
 
 ### Silicon Interposer
@@ -92,7 +92,7 @@ EDSOS realizes the AS model through a novel system architecture composed of the 
 - Distributed operations (GVA routing, cross-PM coherence) are accelerated by a dedicated Data Processing Unit (DPU).
 - In the absence of a dedicated DPU, EDSOS can still operate normally in single-machine mode and allows relevant services to be added to run on traditional cluster networks.
 
-## 1.1.6 Benefits
+## 6 Benefits
 
 EDSOS delivers a unique combination of properties:
 
