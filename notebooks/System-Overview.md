@@ -81,7 +81,7 @@ EDSOS realizes the AS model through a novel system architecture composed of the 
 ### Process Model Based on AS
 - The traditional “process” is replaced by an **Arbor Strux instance**—a tree of nodes.
 - Each node has its own instruction sequence, data fields, and execution state (`ready`, `running`, `blocked`, etc.).
-- Lifecycle operations (`push`, `pop`, `lift`, `merge`) are atomic and mediated by per-core schedulers.
+- Lifecycle operations (`psh`, `pop`, `lft`, `mrg`) are atomic and mediated by per-core schedulers.
 
 ### Boot and Loading Flow
 1. **Early Local View**: Each physical machine (PM) initializes independently, discovers local hardware, and prepares a transition image.
