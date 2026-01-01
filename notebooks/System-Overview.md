@@ -56,7 +56,7 @@ The AS model provides the mathematical foundation for EDSOS’s safety, liveness
 Arxil is EDSOS’s native intermediate language—designed as a **faithful syntactic encoding of the AS model**.
 
 Key characteristics:
-- Arxil source directly maps to AS operations (`psh`, `lft`, `exec`, `cond`), making it suitable as input to the EDSOS loader.
+- Arxil source directly maps to AS operations (`psh`, `pvt`, `exec`, `cond`), making it suitable as input to the EDSOS loader.
 - Functions (`fn`) are logical contracts: parameters and returns act as binding slots, not stack frames. Execution proceeds in-place with no data copying.
 - Mixed-language interoperability is supported via `'lang'` blocks (e.g., `'c'`, `'rust'`), subject to a lowering contract that ensures only declared bindings are accessed.
 - Type information is externalized into `.arxtype` files, enabling rich compile-time semantics with zero runtime overhead.
@@ -81,7 +81,7 @@ EDSOS realizes the AS model through a novel system architecture composed of the 
 ### Process Model Based on AS
 - The traditional “process” is replaced by an **Arbor Strux instance**—a tree of nodes.
 - Each node has its own instruction sequence, data fields, and execution state (`ready`, `running`, `blocked`, etc.).
-- Lifecycle operations (`psh`, `pop`, `lft`, `mrg`) are atomic and mediated by per-core schedulers.
+- Lifecycle operations (`psh`, `pop`, `pvt`, `mrg`) are atomic and mediated by per-core schedulers.
 
 ### Boot and Loading Flow
 1. **Early Local View**: Each physical machine (PM) initializes independently, discovers local hardware, and prepares a transition image.

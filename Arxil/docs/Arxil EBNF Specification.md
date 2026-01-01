@@ -226,7 +226,7 @@ Operand = IDENT | "(" IDENT ")" ;
 ResvInst = 
     ExecDecl | CondDecl | CyclDecl |
     WaitDecl | SgnlDecl | YielDecl | FnshDecl | WarnDecl |
-    PshDecl | PopDecl | LftDecl | MrgDecl | DtcDecl ;
+    PshDecl | PopDecl | pvtDecl | MrgDecl | DtcDecl ;
 
 ExecDecl = "exec", "(", "(", [FieldList], ")", "(", [FieldList], ")", ")", IDENT, ";" ;
 CondDecl = "cond", "(", IDENT, ")", "(", "(", OrdnInst | ExecDecl, ")", "(", OrdnInst | ExecDecl, ")", ")", ";" ;
@@ -244,7 +244,7 @@ NodeRef   = "this" | "all" | IDENT ;
 
 PshDecl = "psh", IDENT, "(", IDENT, "(", BindingList ")", "(", BindingList ")", "(", BindingList ")", ")", ";" ;
 PopDecl = "pop", IDENT, ["(", IDENT, ")"], ";" ;
-LftDecl = "lft", IDENT, "(", [BindingList], ")", "(", [BindingList], ")", ";" ;
+pvtDecl = "pvt", IDENT, "(", [BindingList], ")", "(", [BindingList], ")", ";" ;
 MrgDecl = "mrg", IDENT, ["(", STRING, ")"], ";" ;
 DtcDecl = "dtc", IDENT, "(", IDENT, "(", [DetachingList], ")", "(", [DetachingList], ")", "(", [DetachingList], ")", ")", ["(", STRING, ")"], ";" ;
 

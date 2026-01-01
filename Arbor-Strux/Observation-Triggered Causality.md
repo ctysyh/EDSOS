@@ -23,7 +23,7 @@ The Arbor Strux (AS) computational model redefines computation as the structural
 
 ### 1.1 Motivation: The Need for Structured Causal Coordination
 
-In the Arbor Strux model, each node executes independently within its local context, interacting with others solely through structured sharing (`publ`/`ance` bindings) and atomic structural operations (`psh`, `lft`, etc.). While this eliminates data races and enables zero-copy communication, it leaves open a fundamental question:
+In the Arbor Strux model, each node executes independently within its local context, interacting with others solely through structured sharing (`publ`/`ance` bindings) and atomic structural operations (`psh`, `pvt`, etc.). While this eliminates data races and enables zero-copy communication, it leaves open a fundamental question:
 
 > **How can a node express that its next action depends not on a *value*, but on the *completion of a specific behavior* in another node?**
 
@@ -102,7 +102,7 @@ Despite semantic similarity, OTC improves upon classical memory ordering in key 
 1. **No Shared State Exposure**: Labels are symbolic; no need to allocate or manage shared flags.
 2. **Zero Polling Overhead**: `obsv` is a scheduling constraint, not a spin loop.
 3. **Structural Scoping**: Dependencies are confined to the ancestor chain, eliminating spurious wakeups.
-4. **Dynamic Structure Safety**: Survives `lft` operations because causal channels follow binding semantics.
+4. **Dynamic Structure Safety**: Survives `pvt` operations because causal channels follow binding semantics.
 5. **Declarative Intent**: Expresses *what must be observed*, not *how to wait*.
 
 Thus, OTC is not merely an adaptation but a **refinement**—a higher-level abstraction that leverages AS’s structural discipline to eliminate entire classes of concurrency bugs.

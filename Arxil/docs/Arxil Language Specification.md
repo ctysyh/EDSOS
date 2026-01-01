@@ -73,7 +73,7 @@ SPDX-License-Identifier: Apache-2.0
     - [A.3 Structural Opcodes](#a3-structural-opcodes)
       - [A.3.1 `psh` — Push a New Child Node](#a31-psh--push-a-new-child-node)
       - [A.3.2 `pop` — Remove a Child Node](#a32-pop--remove-a-child-node)
-      - [A.3.3 `lft` — Lift an External Node into the Ancestry Chain](#a33-lft--lift-an-external-node-into-the-ancestry-chain)
+      - [A.3.3 `pvt` — pivot an External Node into the Ancestry Chain](#a33-pvt--pivot-an-external-node-into-the-ancestry-chain)
       - [A.3.4 `mrg` — Merge a Child Node into the Current Node](#a34-mrg--merge-a-child-node-into-the-current-node)
       - [A.3.5 `dtc` — Detach a New Node by Slicing Off Resources](#a35-dtc--detach-a-new-node-by-slicing-off-resources)
 
@@ -99,7 +99,7 @@ Arxil is not a conventional programming language that describes a sequence of im
 | `node` declaration          | A AS Node — the fundamental unit of structure and execution. |
 | `data { ance / publ / priv }` | The node’s field environment (`𝒟`), which holds its state with explicit visibility and sharing semantics. |
 | `code { instruct }` and `fn` | The node’s instruction sequence (`ℐ`) and control flow logic, executed within the node’s context. |
-| Operations like `psh`, `pop`, `lft`, `exec` | Atomic structural operations that drive the evolution of the AS tree, as formally specified in the AS operational semantics. |
+| Operations like `psh`, `pop`, `pvt`, `exec` | Atomic structural operations that drive the evolution of the AS tree, as formally specified in the AS operational semantics. |
 
 Understanding this mapping is crucial: writing Arxil is not about issuing commands to a CPU, but about **declaring how a dynamic, hierarchical structure should be composed and how it should transform itself over time**.
 
@@ -118,8 +118,8 @@ All examples in this document are illustrative and may omit certain details (suc
 
 The Arxil Language Specification defines the syntactic surface of the language, but its meaning is deeply rooted in a set of foundational computational and formal models. This specification assumes the reader's familiarity with these underlying concepts and serves as a bridge between high-level source code and their precise, low-level semantics.
 
-*   **AS Computational Model**: The fundamental execution paradigm of Arxil is the Arbor Strux (AS) computational model. Every `node` declaration, every structural operation (`psh`, `pop`, `lft`), and the very notion of state residing in fields are direct textual representations of entities and processes defined in the *AS Computational Model* document. This model establishes the core principles of "computation as structural evolution," node-based concurrency, and structured sharing.
-*   **Formal Semantics**: The exact, step-by-step behavior of all Arxil operations—both structural (like `Lift(n)`) and data-manipulating (like field resolution)—is formally specified using Separation Logic and operational semantics in the *AS Formal Semantics and Verification* document. This document provides the mathematical proof of correctness for the AS model and, by extension, for well-formed Arxil programs.
+*   **AS Computational Model**: The fundamental execution paradigm of Arxil is the Arbor Strux (AS) computational model. Every `node` declaration, every structural operation (`psh`, `pop`, `pvt`), and the very notion of state residing in fields are direct textual representations of entities and processes defined in the *AS Computational Model* document. This model establishes the core principles of "computation as structural evolution," node-based concurrency, and structured sharing.
+*   **Formal Semantics**: The exact, step-by-step behavior of all Arxil operations—both structural (like `pivot(n)`) and data-manipulating (like field resolution)—is formally specified using Separation Logic and operational semantics in the *AS Formal Semantics and Verification* document. This document provides the mathematical proof of correctness for the AS model and, by extension, for well-formed Arxil programs.
 *   **Field Resolution and Type System**: The mechanics of how field names are resolved at runtime (especially `ance` fields) and how types govern operations and memory layout are detailed in the *Arxil Field Resolution* and *Arxil Type System Architecture* documents, respectively. These specifications explain the two-phase pointer dereferencing process, the binding chain fulfillment model, and the contract-based nature of the `.arxtype` system.
 
 This specification **does not redefine** these foundational concepts. Instead, it leverages them to prescribe the correct way to write Arxil source code that faithfully encodes them.
@@ -167,7 +167,7 @@ imme, futu,
 ance, publ, priv,
 instruct, inst, fn, inst_scri, reserve, resv,
 type, size, layout, ops, interop, validators, docs, hints,
-psh, pop, lft, mrg, dtc,
+psh, pop, pvt, mrg, dtc,
 actv, sgnl, wait, yiel, fnsh, warn,
 exec, cond, cycl, gerf, derf,
 native, asm, libcall,
@@ -301,7 +301,7 @@ Fields are categorized along two orthogonal dimensions: **temporal scope** (`imm
 
     The resolution of an `ance` field reference is a deterministic process. At compile time, the compiler constructs a binding dependency graph to verify type consistency across the entire chain. At runtime, any access to an `ance` field triggers a recursive lookup that either:
     1.  Successfully resolves to a unique physical storage location `(m, f_publ)`, where `f_publ` is a `publ` field of some node `m`, enabling zero-copy access; or
-    2.  Fails if the promise remains unfulfilled (i.e., no `lft` operation has anchored the chain to a `publ` field), resulting in a runtime error or a blocking state depending on the execution policy.
+    2.  Fails if the promise remains unfulfilled (i.e., no `pvt` operation has anchored the chain to a `publ` field), resulting in a runtime error or a blocking state depending on the execution policy.
 
     This formal resolution procedure, including its termination and uniqueness guarantees, is defined in detail in the **Arxil Field Resolution** document under the function `Resolve(n, f)`.
 
@@ -569,13 +569,13 @@ A canonical pattern is the **Cross Arbor Strux Reference Node (CARN)**:
    }
    ```
 
-3. During execution, a parent node uses `psh` to pre-bind and `lft` to fulfill:
+3. During execution, a parent node uses `psh` to pre-bind and `pvt` to fulfill:
    ```axl
    psh c (consumer () (my_buffer => input_buffer));
-   lft buf_node ((payload => my_buffer));
+   pvt buf_node ((payload => my_buffer));
    ```
 
-After `lft`, all descendants bound to `my_buffer` transparently access `buf_node.payload`—no copying, no pointer arithmetic, no dangling references.
+After `pvt`, all descendants bound to `my_buffer` transparently access `buf_node.payload`—no copying, no pointer arithmetic, no dangling references.
 
 This pattern scales naturally across trees, supports dynamic reconfiguration, and integrates seamlessly with reference counting for automatic lifetime management.
 
@@ -1082,14 +1082,14 @@ Options  = IDENT ;  // Reserved for future extensions (e.g., "force")
 
 ---
 
-#### A.3.3 `lft` — Lift an External Node into the Ancestry Chain
+#### A.3.3 `pvt` — pivot an External Node into the Ancestry Chain
 
 - Effect
   - Dynamically binds an existing external node as a logical ancestor of the current node by resolving its `ance` field promises against the external node’s `publ` exports.
 
 - Syntax
 ```ebnf
-LftDecl = "lft", NodeName,
+pvtDecl = "pvt", NodeName,
           "(", [DataList], ")",
           "(", [CodeList], ")",
           ";" ;
@@ -1110,7 +1110,7 @@ ThisCodeFn = IDENT ;
   - `NodeName` refers to an already-instantiated node visible in the current lexical or runtime context (e.g., passed via inter-node coordination).
   - Each `(X => Y)` binds `X` (a `publ` entity in the external node) to `Y` (an `ance` declaration in the current node).
   - No new node is created; only binding resolution is performed.
-  - This realizes the **Lift(n)** transformation, enabling safe, dynamic cross-subtree data sharing without copying.
+  - This realizes the **pivot(n)** transformation, enabling safe, dynamic cross-subtree data sharing without copying.
   - Failure to resolve all `ance` promises results in a runtime error or blocked state, per the binding fulfillment protocol.
 
 ---

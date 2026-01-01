@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: © 2025 Bib Guake
 # SPDX-License-Identifier: CC0-1.0
 
-notebooks/drafts/
+**/drafts/
 Hardware/
 .env
 .env.*

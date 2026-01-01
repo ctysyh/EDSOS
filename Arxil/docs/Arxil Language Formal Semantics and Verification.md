@@ -37,7 +37,7 @@ SPDX-License-Identifier: Apache-2.0
 
 ### 1.2 Arxil-Specific Domains
 
-- `Opcode`: Arxil 完整操作码集合 (`psh`, `lft`, `exec`, `add`, `wait`, etc.).
+- `Opcode`: Arxil 完整操作码集合 (`psh`, `pvt`, `exec`, `add`, `wait`, etc.).
 - `CausalLabel`: 因果事件标签集合（在 `meta_data` 中自定义），供程序声明自己的执行事件，要求地或触发地。形式化为 `Label : String | UUID`，但语义上视为原子符号。
 
 ---
@@ -79,7 +79,7 @@ Formalizes the `.arxtype` contract system.
 - **Field Declaration Check**: For each field declaration $f: T$, $T$ must be in $\text{dom}(\Theta)$.
 - **Function Signature Check**: Parameters and return types of `fn` blocks must be well-formed under $\Theta$.
 - **Opcode Typing Rule**: 数据操作类操作码（如`add (z) (x y);`）需满足互操作规则，并且 $\mathtt{add} \in \Theta(\tau).\mathtt{ops}$.
-- **Structural Opcode Preconditions**: Checks that operands in `psh`/`lft` refer to fields that exist in the current scope and have compatible types for binding.
+- **Structural Opcode Preconditions**: Checks that operands in `psh`/`pvt` refer to fields that exist in the current scope and have compatible types for binding.
 - 静态检查不验证绑定是否存在，只验证类型和字段名在作用域内合法。绑定有效性是动态的（可能阻塞或失败）。
 
 ---
@@ -114,7 +114,7 @@ Rules for `exec`, `cond`, `cycl`, `wait`, `sgnl`, `yiel`, `fnsh`, `emit`, `obsv`
 Rules that modify the global state $\Sigma$.
 
 - *Rule for `psh child (...)`*: Creates a new node $c$, sets $c.\mathcal{A} = [n] ++ n.\mathcal{A}$, adds $c$ to $n.\mathcal{C}$, initializes $c.\mathcal{D} \_ \text{ance}$ according to the binding list, and updates $\Sigma$.
-- *Rule for `lft external_node (...)`*: Updates $n.\mathcal{D}\_ \text{ance}(\text{local_ance_field}) := \mathtt{Bound}(\text{data_source}, \text{source_field})$ in $\Sigma$.
+- *Rule for `pvt external_node (...)`*: Updates $n.\mathcal{D}\_ \text{ance}(\text{local_ance_field}) := \mathtt{Bound}(\text{data_source}, \text{source_field})$ in $\Sigma$.
 
 结构性操作是唯一能破坏良构性的操作，因此其前置条件必须极其严格。
 

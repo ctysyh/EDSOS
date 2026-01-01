@@ -74,8 +74,8 @@ We fix the following syntactic and semantic domains:
 - **Execution states**:  
   $\mathsf{ExecStatus} = \{ \mathtt{ready},\ \mathtt{running},\ \mathtt{blocked},\ \mathtt{zombie},\ \mathtt{error} \}$.
 - **Instructions**: $\mathsf{Instr}$ — a set of atomic operations including  
-  $\mathtt{push}$, $\mathtt{lift}$, $\mathtt{exec}$, $\mathtt{cond}$, $\mathtt{cycl}$, $\mathtt{finish}$, etc.
-  > These atomic operations are usually exposed as opcodes such as `psh` and `lft` in specific programming language interfaces (such as Arxil).
+  $\mathtt{push}$, $\mathtt{pivot}$, $\mathtt{exec}$, $\mathtt{cond}$, $\mathtt{cycl}$, $\mathtt{finish}$, etc.
+  > These atomic operations are usually exposed as opcodes such as `psh` and `pvt` in specific programming language interfaces (such as Arxil).
 - **Field names**: $\mathcal{F} = \mathcal{F}_{\text{priv}} \uplus \mathcal{F}_{\text{publ}} \uplus \mathcal{F}_{\text{ance}}$.
 - **Values**: $\mathcal{V}$ — a domain of base values (integers, booleans, etc.).
 - **Binding references**:  
@@ -188,7 +188,7 @@ $$
 An **event** is the application of an black box operation, e.g.:
 - $\mathtt{exec}(n)$: execute current instruction of $n$,
 - $\mathtt{push}(n, c)$: $n$ creates child $c$,
-- $\mathtt{lift}(n, c)$: restructure subtree rooted at $c$ around $n$.
+- $\mathtt{pivot}(n, c)$: restructure subtree rooted at $c$ around $n$.
 
 Each event modifies finitely many local states.
 
@@ -229,7 +229,7 @@ Under Axiom 7.4.1, the set $\mathsf{ExecStatus}$ admits a natural dynamical part
 - **Transient (metastable) states**: $\mathtt{ready},\ \mathtt{blocked}$ — causally inert but guaranteed to exit within finite steps under the axiom.
 - **Terminal (absorbing) states**: $\mathtt{zombie},\ \mathtt{error}$ — once entered, no further events involving $n$ are possible; these states are closed under all event applications.
 
-Notably, the exit condition for $\mathtt{running}$ is *not* enforced by the model’s transition rules; it depends entirely on the instruction sequence $\mathcal{I}(n)$ (e.g., presence of $\mathtt{finish}$ or loop termination). In contrast, the eventual exit of transient states is *externally guaranteed* by Axiom 7.4.1, contingent on the global causal context (e.g., resolution of ancestor bindings, subtree completion, or structural reconfiguration via $\mathtt{lift}$).
+Notably, the exit condition for $\mathtt{running}$ is *not* enforced by the model’s transition rules; it depends entirely on the instruction sequence $\mathcal{I}(n)$ (e.g., presence of $\mathtt{finish}$ or loop termination). In contrast, the eventual exit of transient states is *externally guaranteed* by Axiom 7.4.1, contingent on the global causal context (e.g., resolution of ancestor bindings, subtree completion, or structural reconfiguration via $\mathtt{pivot}$).
 
 This distinction underscores a fundamental asymmetry in AS dynamics: **activity is local and autonomous, while suspension is global and contextual**.
 
@@ -239,7 +239,7 @@ This distinction underscores a fundamental asymmetry in AS dynamics: **activity 
 
 - Each node $n$ observes only the effects of events in its **causal past**.
 - When $n$ evaluates $S(n, f)$, the result reflects the last write to the physical source $(m, f_{\text{publ}})$ that is causally prior to $n$’s current event.
-- Concurrent modifications by causally unrelated nodes are **not visible** until a causal link is established (e.g., via $\mathtt{lift}$ or rebinding).
+- Concurrent modifications by causally unrelated nodes are **not visible** until a causal link is established (e.g., via $\mathtt{pivot}$ or rebinding).
 - This enables **zero-copy sharing** with **explicit, static-analyzable dependency paths**.
 
 ---
@@ -278,8 +278,6 @@ AS can simulate any Turing machine by:
 > and whose temporal order is partial and observer-dependent.**
 
 ---
-
-翻译成中文：
 
 ## 11. Read and Write Permission Light Cone
 
