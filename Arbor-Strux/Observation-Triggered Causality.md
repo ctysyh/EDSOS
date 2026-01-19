@@ -9,7 +9,7 @@ SPDX-License-Identifier: CC-BY-4.0
 
 *A Native Causal Synchronization Model for the Arbor Strux Computational Framework*
 
-> Version 1.0
+> v0.2.1
 
 ---
 

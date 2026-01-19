@@ -73,7 +73,7 @@ SPDX-License-Identifier: Apache-2.0
     - [A.3 Structural Opcodes](#a3-structural-opcodes)
       - [A.3.1 `psh` — Push a New Child Node](#a31-psh--push-a-new-child-node)
       - [A.3.2 `pop` — Remove a Child Node](#a32-pop--remove-a-child-node)
-      - [A.3.3 `pvt` — pivot an External Node into the Ancestry Chain](#a33-pvt--pivot-an-external-node-into-the-ancestry-chain)
+      - [A.3.3 `pvt` — pivot an Child Node into the Ancestry Chain](#a33-pvt--pivot-an-child-node-into-the-ancestry-chain)
       - [A.3.4 `mrg` — Merge a Child Node into the Current Node](#a34-mrg--merge-a-child-node-into-the-current-node)
       - [A.3.5 `dtc` — Detach a New Node by Slicing Off Resources](#a35-dtc--detach-a-new-node-by-slicing-off-resources)
 
@@ -1082,10 +1082,10 @@ Options  = IDENT ;  // Reserved for future extensions (e.g., "force")
 
 ---
 
-#### A.3.3 `pvt` — pivot an External Node into the Ancestry Chain
+#### A.3.3 `pvt` — pivot an Child Node into the Ancestry Chain
 
 - Effect
-  - Dynamically binds an existing external node as a logical ancestor of the current node by resolving its `ance` field promises against the external node’s `publ` exports.
+  - Dynamically binds an existing child node as a logical ancestor of the current node by resolving its `ance` field promises against the child node’s `publ` exports.
 
 - Syntax
 ```ebnf

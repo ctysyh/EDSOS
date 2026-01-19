@@ -11,6 +11,53 @@ SPDX-License-Identifier: Apache-2.0
 
 ---
 
+- [Arxil Language Formal Semantics and Verification](#arxil-language-formal-semantics-and-verification)
+  - [0 Introduction](#0-introduction)
+    - [0.1 Role and Scope](#01-role-and-scope)
+    - [0.2 Relationship to AS Model](#02-relationship-to-as-model)
+    - [0.3 Document Structure Overview](#03-document-structure-overview)
+  - [1 Basic Domains and Notation](#1-basic-domains-and-notation)
+    - [1.1 Inherited Domains from AS](#11-inherited-domains-from-as)
+    - [1.2 Arxil-Specific Domains](#12-arxil-specific-domains)
+  - [2 Program State Model](#2-program-state-model)
+    - [2.1 Global State ($\\Sigma$)](#21-global-state-sigma)
+    - [2.2 Local Node State ($\\sigma(n)$)](#22-local-node-state-sigman)
+    - [2.3 Field Environment ($\\mathcal{D}(n)$)](#23-field-environment-mathcaldn)
+    - [2.4 Read and Write Permission Light Cone](#24-read-and-write-permission-light-cone)
+      - [2.4.1 Motivation and Intuition](#241-motivation-and-intuition)
+      - [2.4.2 Extended Semantic Domains](#242-extended-semantic-domains)
+      - [2.4.3 Permission Consistency Constraints](#243-permission-consistency-constraints)
+      - [2.4.4 Geometric Interpretation: The Light Cone Model](#244-geometric-interpretation-the-light-cone-model)
+        - [Definition 2.1 (Depth Embedding)](#definition-21-depth-embedding)
+        - [Definition 2.2 (Field Embedding)](#definition-22-field-embedding)
+        - [Definition 2.3 (Binding Ray)](#definition-23-binding-ray)
+        - [Definition 2.4 (Permission Light Cone)](#definition-24-permission-light-cone)
+      - [2.4.5 Dynamic Evolution and Causal Enforcement](#245-dynamic-evolution-and-causal-enforcement)
+      - [2.4.6 Static Analysis via Cone Inspection](#246-static-analysis-via-cone-inspection)
+  - [3. Static Semantics (Type System)](#3-static-semantics-type-system)
+    - [3.1 Type Environment ($\\Theta$)](#31-type-environment-theta)
+    - [3.2 Well-Formedness Rules](#32-well-formedness-rules)
+  - [4. Dynamic Semantics (Operational Semantics)](#4-dynamic-semantics-operational-semantics)
+    - [4.1 Configuration](#41-configuration)
+    - [4.2 Small-Step Transition Relation ($\\longrightarrow$)](#42-small-step-transition-relation-longrightarrow)
+      - [4.2.1 Ordinary Opcodes](#421-ordinary-opcodes)
+      - [4.2.2 Generic Control Opcodes](#422-generic-control-opcodes)
+      - [4.2.3 Structural Opcodes](#423-structural-opcodes)
+  - [5. Field Resolution and Pointer Semantics](#5-field-resolution-and-pointer-semantics)
+    - [5.1 The $\\text{Resolve}$ Function](#51-the-textresolve-function)
+    - [5.2 The $\\text{Deref}$ Function](#52-the-textderef-function)
+    - [5.3 The `gerf` Opcode](#53-the-gerf-opcode)
+  - [6. Key Properties and Proofs](#6-key-properties-and-proofs)
+    - [6.1 Termination of $\\text{Resolve}$](#61-termination-of-textresolve)
+    - [6.2 Unique Physical Source](#62-unique-physical-source)
+    - [6.3 Type Safety\*\* (Sketch)](#63-type-safety-sketch)
+    - [6.4 Structural Integrity](#64-structural-integrity)
+  - [7. Conclusion](#7-conclusion)
+  - [Appendix: Mapping Arxil Syntax to Formal Constructs](#appendix-mapping-arxil-syntax-to-formal-constructs)
+
+
+---
+
 ## 0 Introduction
 
 ### 0.1 Role and Scope
@@ -61,6 +108,144 @@ SPDX-License-Identifier: Apache-2.0
 在 AS 形式化语义定义基础上扩展，新增类型映射 $\Gamma$.
 - $\mathcal{D}(n) = (\mathcal{D}\_\text{priv}^n、\mathcal{D}\_\text{publ}^n、\mathcal{D}\_\text{ance}^n)$
 - $\Gamma(n) : (\mathcal{F}\_\text{priv} \cup \mathcal{F}\_\text{publ} \cup \mathcal{F}\_\text{ance}) \longrightarrow \text{TypeID}$ (节点 $n$ 的静态类型环境).
+
+### 2.4 Read and Write Permission Light Cone
+
+#### 2.4.1 Motivation and Intuition
+
+In the causal arbor network of Arbor Strux, field binding chains define paths of data dependency from descendant nodes to their physical sources in ancestors. While this structure enables zero-copy sharing and analyzable reference paths, it provides no built-in mechanism to prevent race conditions when multiple descendants concurrently write to the same public field.
+
+To reconcile structural freedom with data-race safety, we introduce **field-level read/write permissions** and model their semantics through a geometric metaphor: the **permission light cone**.
+
+> **Intuition**:  
+> Imagine embedding the AS tree into a 2D Euclidean plane:
+> - The **x-axis** represents depth in the tree (root at $x=0$, children at increasing $x$).
+> - The **y-axis** linearly orders field names within each node’s public namespace.
+>
+> A binding chain from a descendant $n$ to its resolved source $(m, f)$ becomes a polyline in the $(x,y)$-plane, ending at $(x_m, y_f)$. All such chains resolving to the same $(m,f)$ form a **cone** emanating backward from the source.
+>
+> Now assign to each node along a chain a **filter**—a permission lens:
+> - `READ` → transparent filter (light passes through, no modification);
+> - `WRITE` → reflective filter (light bounces back, modifying the source);
+> - Mixed or inconsistent filters cause optical interference—i.e., data races.
+>
+> The entire structure becomes a **3D permission light cone**, where a third axis $z$ indexes distinct binding chains converging on the same source. This cone not only visualizes dependencies but also encodes concurrency constraints.
+
+This section formalizes this intuition while preserving its explanatory power.
+
+#### 2.4.2 Extended Semantic Domains
+
+We extend the basic domains of Section 2 as follows:
+
+- **Privilege types**:
+  $$
+  \mathsf{Priv} ::= \mathtt{READ} \mid \mathtt{WRITE}
+  $$
+
+- **Field declaration with privilege**:
+  Each public field in $\mathcal{D}_{\text{publ}}(n)$ is now annotated:
+  $$
+  \mathcal{D}_{\text{publ}}(n) : \mathcal{F}_{\text{publ}} \rightharpoonup \mathcal{V} \times \mathsf{Priv}
+  $$
+  The privilege indicates the *default export mode* of the field.
+
+- **Ancestor binding with declared intent**:
+  Binding references are enriched with access intent:
+  $$
+  \texttt{BindingRef} ::= \texttt{Unbound} \mid \texttt{Bound}(m, f', p)
+  $$
+  where $p \in \mathsf{Priv}$ is the privilege *requested by the descendant*.
+
+- **Node-local access registry**:
+  Each node $n$ maintains a dynamic map of active accesses:
+  $$
+  \mathcal{A}\!\mathcal{C}\!\mathcal{C}(n) \subseteq \mathcal{N} \times \mathcal{F}_{\text{publ}} \times \mathsf{Priv}
+  $$
+  recording which child (or self) currently holds which privilege on which field.
+
+#### 2.4.3 Permission Consistency Constraints
+
+We impose new well-formedness conditions on configurations.
+
+> **(WF5) Source Privilege Compatibility**  
+> For any node $n$, field $f \in \mathrm{dom}(\mathcal{D}_{\text{publ}}(n))$, and any descendant $d$ such that  
+> $\texttt{Resolve}(d, f') = (n, f)$ with declared privilege $p_d$,  
+> it must hold that:
+> - If $p_d = \mathtt{WRITE}$, then the source field’s declared privilege includes $\mathtt{WRITE}$;
+> - If $p_d = \mathtt{READ}$, then the source field’s declared privilege includes $\mathtt{READ}$.
+
+> **(WF6) Concurrent Access Exclusivity**  
+> For any node $n$, field $f$, and any two distinct active accesses  
+> $(c_1, f, p_1), (c_2, f, p_2) \in \mathcal{A}\!\mathcal{C}\!\mathcal{C}(n)$,  
+> it must not be the case that $p_1 = \mathtt{WRITE}$ and $p_2 \in \{\mathtt{READ}, \mathtt{WRITE}\}$.
+
+These rules enforce that **at most one writer may access a field at any time**, and readers are blocked during writes—mirroring mutual exclusion.
+
+#### 2.4.4 Geometric Interpretation: The Light Cone Model
+
+We now formalize the geometric intuition.
+
+##### Definition 2.1 (Depth Embedding)
+For each node $n$, define its depth:
+$$
+\delta(n) = 
+\begin{cases}
+0 & \text{if } \mathcal{A}(n) = [] \\
+1 + \delta(p_1) & \text{if } \mathcal{A}(n) = [p_1, \dots]
+\end{cases}
+$$
+This gives the $x$-coordinate: $x_n := \delta(n)$.
+
+##### Definition 2.2 (Field Embedding)
+Fix an injective encoding $\phi : \mathcal{F} \to \mathbb{R}$. For field $f$, set $y_f := \phi(f)$.
+
+##### Definition 2.3 (Binding Ray)
+A binding chain from $d$ to source $(s, f)$ induces a discrete ray:
+$$
+\mathcal{R}(d \leadsto s,f) = \big\{ (x_n, y_f) \mid n \in \text{path}(d \to s) \big\}
+$$
+where $\text{path}(d \to s)$ is the unique ancestor chain from $d$ up to $s$.
+
+##### Definition 2.4 (Permission Light Cone)
+For a fixed source $(s, f)$, let $\mathcal{C}(s,f)$ be the set of all descendants $d$ such that $\texttt{Resolve}(d, \cdot) = (s,f)$. Index them as $\{d_1, d_2, \dots, d_k\}$. The **permission light cone** is the set:
+$$
+\mathcal{L}(s,f) = \bigcup_{i=1}^k \Big( \mathcal{R}(d_i \leadsto s,f) \times \{i\} \Big) \subseteq \mathbb{R}^3
+$$
+with coordinates $(x, y, z)$. Each ray carries a **permission profile**:
+$$
+\Pi_i = \big[ p_{n}^{(i)} \big]_{n \in \text{path}(d_i \to s)}
+$$
+where $p_n^{(i)}$ is the privilege declared by $d_i$ at node $n$ (typically constant along the ray).
+
+> **Optical Semantics**:
+> - A ray with all $p = \mathtt{READ}$ is a **transmissive beam**—it observes but does not perturb.
+> - A ray containing $p = \mathtt{WRITE}$ is a **reflective beam**—it modifies the apex $(x_s, y_f, \cdot)$, potentially affecting other rays.
+> - Two reflective rays in the same cone with overlapping $x$-projections and no causal order constitute a **race interference pattern**.
+
+#### 2.4.5 Dynamic Evolution and Causal Enforcement
+
+When a node $d$ attempts to execute an instruction that accesses a bound field $f$:
+
+1. The runtime computes $\texttt{Resolve}(d, f) = (s, f_s)$;
+2. It checks whether the requested privilege $p$ is compatible with $\mathcal{D}_{\text{publ}}(s)(f_s)$ (WF5);
+3. It queries $\mathcal{A}\!\mathcal{C}\!\mathcal{C}(s)$:
+   - If $p = \mathtt{READ}$ and no writer is active → grant access;
+   - If $p = \mathtt{WRITE}$ and no other access is active → grant exclusive access;
+   - Otherwise → block the node ($\mathcal{E}(d) := \mathtt{blocked}$) until conflicting accesses complete.
+
+Upon completion, the access is removed from $\mathcal{A}\!\mathcal{C}\!\mathcal{C}(s)$, and waiting nodes are re-evaluated.
+
+This mechanism ensures that **the light cone remains optically coherent**: no two conflicting beams illuminate the apex simultaneously.
+
+#### 2.4.6 Static Analysis via Cone Inspection
+
+The light cone model enables powerful compile-time checks:
+
+- **Race Detection**: Scan $\mathcal{L}(s,f)$ for multiple $\mathtt{WRITE}$ rays whose $x$-intervals overlap and lack a happens-before edge. Flag as potential race.
+- **Over-Serialization**: Detect cones where all rays are $\mathtt{WRITE}$ despite operating on disjoint $y$-regions (different fields)—suggest privilege refinement.
+- **Dead Binding**: Identify rays that terminate at unlit apices (fields never written)—optimize away.
+
+Visualization tools can render $\mathcal{L}(s,f)$ as interactive 3D cones, with color-coded rays (green = READ, red = WRITE), allowing developers to “see” concurrency structure.
 
 ---
 

@@ -40,9 +40,10 @@ Repository layout
 - Arxil/               — language
 - edsos/               — operating system
 - LICENSES/            — project licenses
-- notebooks/           — overview, exploratory notebooks and drafts
+- notebooks/           — exploratory notebooks and drafts
 - CONTRIBUTING.md      — contributing guides
 - README.md            — this file
+- System-Overview.md   — overview
 
 
 Roadmap
