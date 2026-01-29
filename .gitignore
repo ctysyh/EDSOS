@@ -3,6 +3,7 @@
 
 **/drafts/
 **/workbuffer/
+**/backups/
 Hardware/Internal/
 .env
 .env.*
