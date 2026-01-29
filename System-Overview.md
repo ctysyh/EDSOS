@@ -21,7 +21,7 @@ This mismatch leads to fundamental limitations:
 - **Weak safety guarantees**: Concurrency control is largely left to application logic, resulting in pervasive race conditions and memory safety vulnerabilities.
 - **Opaque resource management**: The OS hides hardware topology, making performance optimization and failure recovery reactive rather than structural.
 
-EDSOS (Explicitly Distributed Single Operating System) addresses these challenges by embracing distribution as a first-class concern—not as an afterthought to be abstracted away, but as a core organizing principle. It does so through a unified theoretical foundation: the **Arbor Strux (AS) Model**.
+**EDSOS (Explicitly Distributed Single Operating System)** addresses these challenges by embracing distribution as a first-class concern—not as an afterthought to be abstracted away, but as a core organizing principle. It does so through a unified theoretical foundation: the **Arbor Strux (AS) Model**.
 
 ## 2 Core Principles
 

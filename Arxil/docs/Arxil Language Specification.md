@@ -258,7 +258,7 @@ The sections serve distinct purposes:
 
 #### 3.3.2 `causal` Block
 
-The `causal` block in `meta_data` is optional that depending to whether two of Generic Opcodes `emit` or `obsv` is used inside the node or is expected to appear in descendant nodes.
+The `causal` block in `meta_data.runtime` is optional that depending to whether two of Generic Opcodes `emit` or `obsv` is used inside the node or is expected to appear in descendant nodes.
 
 ```ebnf
 CausalDecl = "causal", "{", { CausalList }, "}" ;
@@ -497,6 +497,15 @@ ops {
 This contract ensures that `p + 1` advances the pointer by 4 bytes (the size of an `i32`), providing array-like semantics.
 
 #### 4.4.3 Pointer Dereferencing Model
+The node's virtual address space is a contiguous memory region that encompasses all components of a node as declared in the Arxil source code. It is structured as a sequential layout of three major segments:
+- The `meta_data.rntm` section, storing runtime metadata and structural information
+- The `data` section, containing all declared fields with their temporal (`imme`/`futu`) and visibility (`ance`/`publ`/`priv`) categories
+- The `code` section, comprising instruction sequences and function declarations
+
+This layout strictly corresponds to the textual declaration order in the Arxil source code, ensuring deterministic memory organization. Pointer values within a node represent offsets within this virtual address space.
+A pointer may also point to the start of an `fn` in the `code` section of the node’s virtual address space, enabling a functionality analogous to function pointers in some high-level programming languages. Notably, since the `code` section in Arxil source code is ultimately fully represented as instruction sequences, where the character representation of instructions available in the sequences is clearly defined and structurally stable, a pointer can theoretically be manually computed to target the starting address of a specific instruction within an `fn` instruction sequence in the node’s virtual address space. Arxil guarantees that this behavior is *defined*, but does not necessarily ensure its *safety* or *applicability*, and it may suffer from trigger compiler warnings or even runtime errors due to improper implementation.
+However, not all regions are accessible through arbitrary pointers. Access to different regions of the virtual address space is governed by the visibility defined for each field and section. The precise field offsets within this space are computed during compilation based on the `.arxtype` definitions, as described in section 4.3.
+
 Dereferencing a pointer follows a strict two-phase resolution process to maintain memory safety and structural integrity:
 1.  **Local Field Location**: The virtual address embedded in the pointer value is resolved to a specific field declaration within its source node's virtual address space.
 2.  **Remote Binding Resolution**: If the located field is an `ance` field, the standard binding resolution protocol is invoked to find its ultimate physical storage location in a `publ` field of another node.

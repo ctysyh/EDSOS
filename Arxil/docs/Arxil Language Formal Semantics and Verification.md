@@ -20,9 +20,9 @@ SPDX-License-Identifier: Apache-2.0
     - [1.1 Inherited Domains from AS](#11-inherited-domains-from-as)
     - [1.2 Arxil-Specific Domains](#12-arxil-specific-domains)
   - [2 Program State Model](#2-program-state-model)
-    - [2.1 Global State ($\\Sigma$)](#21-global-state-sigma)
-    - [2.2 Local Node State ($\\sigma(n)$)](#22-local-node-state-sigman)
-    - [2.3 Field Environment ($\\mathcal{D}(n)$)](#23-field-environment-mathcaldn)
+    - [2.1 Global State](#21-global-state)
+    - [2.2 Local Node State](#22-local-node-state)
+    - [2.3 Field Environment](#23-field-environment)
     - [2.4 Read and Write Permission Light Cone](#24-read-and-write-permission-light-cone)
       - [2.4.1 Motivation and Intuition](#241-motivation-and-intuition)
       - [2.4.2 Extended Semantic Domains](#242-extended-semantic-domains)
@@ -91,11 +91,11 @@ SPDX-License-Identifier: Apache-2.0
 
 ## 2 Program State Model
 
-### 2.1 Global State ($\Sigma$)
+### 2.1 Global State
 
 合规 AS 树，形式化定义为节点标识符到其本地状态的部分映射: $\Sigma : \mathcal{N} \rightharpoonup \sigma(n)$. $\Sigma$ 必须满足 ASFS 中的 (WF1)-(WF4) 良构约束。
 
-### 2.2 Local Node State ($\sigma(n)$)
+### 2.2 Local Node State
 
 > Directly adopts the definition from ASFS Section 3.
 
@@ -103,7 +103,7 @@ SPDX-License-Identifier: Apache-2.0
 - 结合各组件在 Arxil 执行过程中的作用简要说明 (e.g., $\mathcal{E}(n)$ is modified by `wait`/`fnsh`; $\mathcal{I}(n)$ and $\mathtt{pc}(n)$ drive the instruction loop).
 - $\mathtt{pc}(n)$ 的取值范围是 $\mathcal{I}(n)$ 的索引，即 $\mathtt{pc}(n) \in \{ 0, \dots, | \mathcal{I}(n) | \}$，且当 $\mathtt{pc}(n) = \mathcal{I}(n)$ 时，节点进入 `zombie` 状态.
 
-### 2.3 Field Environment ($\mathcal{D}(n)$)
+### 2.3 Field Environment
 
 在 AS 形式化语义定义基础上扩展，新增类型映射 $\Gamma$.
 - $\mathcal{D}(n) = (\mathcal{D}\_\text{priv}^n、\mathcal{D}\_\text{publ}^n、\mathcal{D}\_\text{ance}^n)$
