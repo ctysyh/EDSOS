@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: © 2025 Bib Guake
+SPDX-FileCopyrightText: © 2025-2026 Bib Guake
 SPDX-License-Identifier: CC-BY-4.0
 -->
 
