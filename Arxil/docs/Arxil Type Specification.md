@@ -343,7 +343,7 @@ Opcodes like `add`, `mul`, `and`, and `cpy` are Ordinary Opcodes. Their legality
 Every custom Ordinary Opcode **must** explicitly define the following in its `.arxtype` declaration:
 
 1. **Name**
-   - Must be a valid Arxil identifier (see §2.2).  
+   - Must be a valid Arxil identifier (see [§2.2](#3-about-ordinary-opcode-in-arxtype)).  
    - Recommended naming convention: `TypeName.opName` (e.g., `Matrix4x4.inv`). The dot (`.`) is part of the name string and carries no syntactic meaning; it serves only as a human-readable logically namespace delimiter.
 
 2. **Operand Signature**

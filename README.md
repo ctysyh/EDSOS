@@ -3,7 +3,7 @@ SPDX-FileCopyrightText: © 2025-2026 Bib Guake
 SPDX-License-Identifier: LGPL-3.0-or-later
 -->
 
-README
+# EDSOS Framework
 
 [![status: early-development](https://img.shields.io/badge/status-early--development-yellow)](https://github.com/ctysyh/EDSOS)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)

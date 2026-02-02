@@ -11,6 +11,11 @@ SPDX-License-Identifier: Apache-2.0
 
 ---
 
+> TODO List
+> 1. 明确指出编译器进行的优化是直接对代码文本的字面上的调整，这是中间语言的体现，是 Arxil 与机器码“逐句翻译”的保证。
+
+---
+
 - [Arxil Language Specification](#arxil-language-specification)
   - [1. Introduction](#1-introduction)
     - [1.1 Role and Scope](#11-role-and-scope)
@@ -287,7 +292,7 @@ ArraySize = "[", INTEGER, "]" ;
 ```
 
 Each field declaration consists of:
-- A **type specifier** (`TypeSpec`), which refers to an external `.arxtype` definition (see §4).
+- A **type specifier** (`TypeSpec`), which refers to an external `.arxtype` definition (see [§4](#4-type-system-interface)).
 - An optional **array size** (currently restricted to compile-time constants).
 - An **identifier** naming the field.
 
@@ -643,7 +648,7 @@ This read-write separation originates from the small-step operational semantics 
 Every custom Ordinary Opcode **must** explicitly define the following in its `.arxtype` declaration:
 
 1. **Name**
-   - Must be a valid Arxil identifier (see §2.2).  
+   - Must be a valid Arxil identifier (see [§2.2](#22-identifiers)).  
    - Recommended naming convention: `TypeName.opName` (e.g., `Matrix4x4.inv`). The dot (`.`) is part of the name string and carries no syntactic meaning; it serves only as a human-readable logically namespace delimiter.
 
 2. **Operand Signature**
@@ -802,7 +807,7 @@ Label    = STRING ;
 
 - Semantics
   - Corresponds to the same-name opcode in Observation-Triggered Causality (OTC).
-  - Records that the current node has committed to the event identified by `"label"`, and notifies all descendant nodes with pending observations for this label.
+  - Records that the current node has committed to the semaphore identified by `"label"`, and notifies all descendant nodes with pending observations for this label.
 
 - Constraints
   - All of the `Label` must be declared in `causal` block in `meta_data`.
@@ -854,7 +859,7 @@ Options   = IDENT ;
 
 - Semantics
   - This is a system call to the scheduler (ArxilVM/EDSOS).
-  - The `WaitSemaphore` identifier *declare* an event name to wait somebody `sgnl` the same event name.
+  - The `WaitSemaphore` identifier *declare* an semaphore name to wait somebody `sgnl` the same semaphore name.
   - The optional `Options` identifier may specify synchronization policy as defined by the runtime.
   - While blocked, the node retains all field values, register values and program counter state.
   - The node remains ineligible for scheduling until signaled.
@@ -872,7 +877,7 @@ wait (input_ready) ();
 #### A.2.7 `sgnl` — Signal a Blocked Node
 
 - Effect
-  - Wakes up one or more nodes waiting on the specified event name, transitioning them from `blocked` to `ready`.
+  - Wakes up one or more nodes waiting on the specified semaphore name, transitioning them from `blocked` to `ready`.
 
 - Syntax
 ```ebnf
@@ -884,7 +889,7 @@ Options  = IDENT ;
 - Semantics
   - Dual to `wait`; forms a synchronization pair.
   - The `WaitSemaphore` identifier must match the one used in a corresponding wait.
-  - If no node is waiting on that event name, `sgnl` will be in undefined behavior inside Arxil, but the runtime (ArxilVM or EDSOS) may give an precise definition.
+  - If no node is waiting on that semaphore name, `sgnl` will be in undefined behavior inside Arxil, but the runtime (ArxilVM or EDSOS) may give an precise definition.
   - The exact signaling policy (e.g., FIFO, broadcast) is runtime-defined.
 
 - Example
@@ -1031,7 +1036,7 @@ The following five opcodes constitute the complete set of Structural Opcodes.
 #### A.3.1 `psh` — Push a New Child Node
 
 - Effect
-  - Instantiates a new child node from a named template and attaches it to the current node. The new node inherits specified resources via explicit binding declarations, establishing zero-copy shared access to the parent’s `publ` or resolved `ance` fields and functions.
+  - Instantiates a new child node from a named template and attaches it to the current node. The new node inherits specified resources via explicit binding declarations, establishing zero-copy shared access to the parent’s `publ` or `ance` fields and functions.
 
 - Syntax
 ```ebnf

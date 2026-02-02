@@ -79,7 +79,7 @@ SPDX-License-Identifier: Apache-2.0
 
 - $\mathcal{N}$: 节点标识符
 - $\text{ExecStatus} = {\mathtt{ready}, \mathtt{running}, \mathtt{blocked}, \mathtt{zombie}, \mathtt{error}}$.
-- $\text{BindingRef} ::= \mathtt{Unbound} | \mathtt{Bound}(m, f')$，其中 $m \in \mathcal{N}$，$f' \in \mathcal{F}\_\text{publ}$. 详见 ASFS §3.2。
+- $\text{BindingRef} ::= \mathtt{Unbound} | \mathtt{Bound}(m, f')$，其中 $m \in \mathcal{N}$，$f' \in \mathcal{F}\_\text{publ}$. 详见 [ASFS §3.2](../../Arbor-Strux/AS%20Formal%20Semantics%20and%20Verification.md)。
 - $\mathcal{F} = \mathcal{F}\_\text{priv} ⊎ \mathcal{F}\_\text{publ} ⊎ \mathcal{F}\_\text{ance}$（注：`⊎` 代表不相交并集）.
 
 ### 1.2 Arxil-Specific Domains
