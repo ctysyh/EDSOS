@@ -7,8 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 
 ---
 
-> v0.3-algha — Draft
-> last change — 2025.11.17
+> v0.1.2-drafting
 
 ---
 

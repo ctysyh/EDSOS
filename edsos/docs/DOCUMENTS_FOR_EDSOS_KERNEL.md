@@ -47,7 +47,7 @@ v0.2.1
 
 ## 1 Core-Models
 
-[本编](./1-Core-Models/)主要介绍作为约定的 EDSOS Kernel 系统模型框架。值得注意的是，本编描述EDSOS Kernel内部的核心模型，基于但不同于Arbor Strux理论；Arbor Strux理论的完整内容请参考[Arbor Strux文档目录](../../Arbor-Strux/)。
+[本编](./1-Core-Models/)主要介绍作为约定的 EDSOS Kernel 核心模型概念。值得注意的是，本编描述EDSOS Kernel内部的核心模型，基于但不同于Arbor Strux理论；Arbor Strux理论的完整内容请参考[Arbor Strux文档目录](../../Arbor-Strux/)。
 
 ### 1.1 Memory-Model
 
@@ -61,7 +61,7 @@ v0.2.1
 
 ## 2 Architecture
 
-[本编](./2-Architecture/)主要介绍实现了前述框架的 EDSOS Kernel 工程细节设计。
+[本编](./2-Architecture/)主要介绍实现了前述概念的 EDSOS Kernel 工程细节设计。
 
 ### 2.1 Memory-Subsystem
 
@@ -77,7 +77,7 @@ v0.2.1
 
 ### 2.4 Hardware-Cooperative-Execution
 
-[本篇](./2-Architecture/2.4-Hardware-Cooperative-Execution.md)介绍内存子系统和执行子系统的硬件交互面细节，包括对 Native-ISA 的利用和在其他 ISA 上的模拟实现。
+[本篇](./2-Architecture/2.4-Hardware-Cooperative-Execution.md)介绍内存子系统和执行子系统的硬件交互面细节，包括对 Native-ISA 的利用和在其他 ISA 上的模拟实现，与对 DPU 的利用。
 
 ### 2.5 Syscall-Model
 

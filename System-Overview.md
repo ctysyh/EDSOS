@@ -7,7 +7,7 @@ SPDX-License-Identifier: LGPL-3.0-or-later
 
 ---
 
-> v0.2.1
+> v0.2.2
 
 ---
 
@@ -29,8 +29,7 @@ This mismatch leads to fundamental limitations:
 
 Key aspects of the AS model include:
 - **Causal Arbor Network**: Space is encoded as a dynamic tree topology; time emerges as a partial order over local events (no global clock).
-- **Field Binding Chains**: Data sharing occurs via explicit paths from descendant nodes to public fields in ancestors, enabling zero-copy reference with analyzable dependency graphs.
-- **Permission Light Cone**: A detection model for reasoning about read/write permissions and race freedom, where concurrent accesses are safe if their “light cones” do not interfere causally.
+- **Field Binding Chains**: Data sharing occurs via explicit paths from descendant nodes to public fields in ancestors, enabling zero-copy reference with analyzable dependency graphs. This derives some more properties and structures, includeing Permission Light Cone which is a detection model for reasoning about read/write permissions and race freedom, where concurrent accesses are safe if their “light cones” do not interfere causally.
 - **Turing Completeness**: Despite its structural constraints, AS can simulate any Turing machine using conditional branching (`cond`), loops (`cycl`), and jumps (`exec`).
 
 In engineering implementation, the AS model is linearly embedded into a one-dimensional Euclidean spacethe which is GVA/LVA space in EDSOS Kernel. This embedding is via the LENS (Linear Embedding of Node Structures with Skip Indexing) mechanism, with the original structural information of the AS model preserved via auxiliary data structures.

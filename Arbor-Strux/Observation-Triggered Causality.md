@@ -5,11 +5,41 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Observation-Triggered Causality
 
----
-
 *A Native Causal Synchronization Model for the Arbor Strux Computational Framework*
 
+---
+
 > v0.2.1
+
+---
+
+- [Observation-Triggered Causality](#observation-triggered-causality)
+  - [Abstract](#abstract)
+  - [1. Introduction](#1-introduction)
+    - [1.1 Motivation: The Need for Structured Causal Coordination](#11-motivation-the-need-for-structured-causal-coordination)
+    - [1.2 Core Insight: Time as Activated Causality](#12-core-insight-time-as-activated-causality)
+  - [2. Theoretical Foundations](#2-theoretical-foundations)
+    - [2.1 AS Spacetime Manifold Recap](#21-as-spacetime-manifold-recap)
+    - [2.2 OTC as a Causal Extension Rule](#22-otc-as-a-causal-extension-rule)
+    - [2.3 Event Coordinates in $\\mathcal{M}$](#23-event-coordinates-in-mathcalm)
+  - [3. Relation to Classical Concurrency Theory](#3-relation-to-classical-concurrency-theory)
+    - [3.1 Correspondence with Release/Acquire Semantics](#31-correspondence-with-releaseacquire-semantics)
+    - [3.2 Principled Advantages of OTC](#32-principled-advantages-of-otc)
+  - [4. Information-Theoretic Minimality](#4-information-theoretic-minimality)
+    - [4.1 The Minimal Signal](#41-the-minimal-signal)
+    - [4.2 Runtime Cost Analysis](#42-runtime-cost-analysis)
+  - [5. Language Realization in Arxil](#5-language-realization-in-arxil)
+    - [5.1 Syntax Extension](#51-syntax-extension)
+    - [5.2 Semantic Specification](#52-semantic-specification)
+    - [5.3 Placement in Arxil Opcode Taxonomy](#53-placement-in-arxil-opcode-taxonomy)
+    - [5.4 Naming Rationale](#54-naming-rationale)
+  - [6. Implementation Considerations](#6-implementation-considerations)
+    - [6.1 Node State Extension](#61-node-state-extension)
+    - [6.2 Scheduler Integration](#62-scheduler-integration)
+    - [6.3 Static Verification](#63-static-verification)
+  - [7. Conclusion](#7-conclusion)
+  - [References](#references)
+
 
 ---
 
