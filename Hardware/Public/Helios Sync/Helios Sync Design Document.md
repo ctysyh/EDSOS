@@ -166,3 +166,7 @@ It is not merely a clock synchronization solution, but an engineering practice o
 **Appendix A**: Typical deployment schematic (omitted)  
 **Appendix B**: Opto-Sync Block RTL interface definition (omitted)  
 **Appendix C**: Helios Mobile APP UI prototype (omitted)
+
+---
+
+*End of Document.*

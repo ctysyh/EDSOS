@@ -11,7 +11,7 @@ SPDX-License-Identifier: LGPL-3.0-or-later
 [![License: LGPL-3.0-or-later](https://img.shields.io/badge/License-LGPL--3.0--or--later-green.svg)](https://www.gnu.org/licenses/lgpl-3.0.html)
 
 
-EDSOS — Explicit Distributed Single Operating System.
+*Explicit Distributed Single Operating System*
 
 Table of Contents
 - Project overview
@@ -25,7 +25,7 @@ Table of Contents
 
 Project overview
 ----------------
-EDSOS is a project that began as a set of documents and design notes. The goal of EDSOS is to provide an opensource full stack on high-performance distributed computing.
+EDSOS Framework is a project focussing on distributed theory and practice. The goal of EDSOS Framework is to provide an opensource full stack on high-performance distributed computing. EDSOS Framework has begun as various sets of documents and design notes and has been having a grand vision.
 
 
 Current status
@@ -38,9 +38,10 @@ Repository layout
 ----------------
 - Arbor-Strux/         — basic theory
 - Arxil/               — language
-- edsos/               — operating system
+- edsos-kernel/        — operating system
 - LICENSES/            — project licenses
 - notebooks/           — exploratory notebooks and drafts
+- Other-Foundations/   — other theoretical foundations
 - CONTRIBUTING.md      — contributing guides
 - README.md            — this file
 - System-Overview.md   — overview
